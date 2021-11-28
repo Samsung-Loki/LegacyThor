@@ -5,7 +5,9 @@ using Hreidmar.Library.Exceptions;
 using LibUsbDotNet;
 using LibUsbDotNet.Descriptors;
 using LibUsbDotNet.Info;
+using LibUsbDotNet.LudnMonoLibUsb;
 using LibUsbDotNet.Main;
+using MonoLibUsb;
 using Spectre.Console;
 
 namespace Hreidmar.Library
@@ -32,15 +34,16 @@ namespace Hreidmar.Library
         {
             UsbRegistry found = null;
             foreach (UsbRegistry device in UsbDevice.AllDevices) {
-                if (device.Vid == SamsungKVid && SamsungPids.Contains(device.Pid)) {
-                    AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Found device: {device.Vid}/{device.Pid}");
-                    found = device;
-                }
+                if (device.Vid != SamsungKVid || !SamsungPids.Contains(device.Pid)) continue;
+                AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Found device: {device.Vid}/{device.Pid}");
+                found = device;
             }
             
             if (found == null) throw new DeviceNotFoundException("No Samsung devices were found!");
             AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Selected device: {found.Vid}/{found.Pid}");
             _device = found;
+            if (!_device.Device.Open())
+                throw new DeviceConnectionFailedException("Unable to open device!");;
             Initialize();
         }
 
@@ -51,6 +54,8 @@ namespace Hreidmar.Library
         public DeviceSession(UsbRegistry device)
         {
             _device = device;
+            if (!_device.Device.Open())
+                throw new DeviceConnectionFailedException("Unable to open device!");
             Initialize();
         }
 
@@ -67,14 +72,16 @@ namespace Hreidmar.Library
             ReadEndpointID readEndpoint = 0;
             WriteEndpointID writeEndpoint = 0;
             bool found = false;
+            AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Interfaces total: {_device.Device.Configs[0].InterfaceInfoList.Count}!");
             foreach (UsbInterfaceInfo interfaceInfo in _device.Device.Configs[0].InterfaceInfoList) {
                 byte possibleReadEndpoint = 0xFF;
                 byte possibleWriteEndpoint = 0xFF;
-                if (interfaceInfo.EndpointInfoList.Count != 2) continue;
-                if (interfaceInfo.Descriptor.Class != ClassCodeType.Data) continue;
                 _interfaceId = interfaceInfo.Descriptor.InterfaceID;
                 _alternateId = interfaceInfo.Descriptor.AlternateID;
-                AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Found valid interface: 0x{_interfaceId:X2}/0x{_alternateId:X2}!");
+                AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Interface 0x{_interfaceId:X2}/0x{_alternateId:X2}: {interfaceInfo.EndpointInfoList.Count}/{interfaceInfo.Descriptor.Class}");
+                if (interfaceInfo.EndpointInfoList.Count != 2) continue;
+                if (interfaceInfo.Descriptor.Class != ClassCodeType.Data) continue;
+                AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Interface is valid!");
                 foreach (var endpoint in interfaceInfo.EndpointInfoList) {
                     var id = endpoint.Descriptor.EndpointID;
                     if (id is >= 0x81 and <= 0x8F)
@@ -88,7 +95,7 @@ namespace Hreidmar.Library
 
                 if (possibleReadEndpoint == 0xFF || possibleWriteEndpoint == 0xFF) continue;
                 found = true;
-                AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Found valid endpoints: 0x{possibleReadEndpoint:X2}/0x{possibleWriteEndpoint:X2}!");
+                AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Endpoints are valid!");
                 readEndpoint = (ReadEndpointID) possibleReadEndpoint;
                 writeEndpoint = (WriteEndpointID) possibleWriteEndpoint;
             }
@@ -99,12 +106,18 @@ namespace Hreidmar.Library
             if (!_wholeDevice.SetConfiguration(_device.Device.Configs[0].Descriptor.ConfigID)
                 || !_wholeDevice.ClaimInterface(_interfaceId)
                 || !_wholeDevice.SetAltInterface(_alternateId)
-                || !_wholeDevice.Open())
-                throw new DeviceConnectionFailedException("Unable setup device");
-            
-            _reader = _wholeDevice.OpenEndpointReader(readEndpoint, 512, EndpointType.Bulk);
+                || !_wholeDevice.ResetDevice())
+                throw new DeviceConnectionFailedException("Unable to setup device");
+
+            if (_wholeDevice is MonoUsbDevice mono
+                && MonoUsbApi.KernelDriverActive(mono.Profile.OpenDeviceHandle(), _interfaceId) == 1) {
+                MonoUsbApi.DetachKernelDriver(mono.Profile.OpenDeviceHandle(), _interfaceId);
+                AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Detached kernel driver!");
+            }
+
             _writer = _wholeDevice.OpenEndpointWriter(writeEndpoint, EndpointType.Bulk);
-            
+            _reader = _wholeDevice.OpenEndpointReader(readEndpoint, 512, EndpointType.Bulk);
+
             // Handshake
             var buf = Encoding.ASCII.GetBytes("ODIN");
             Array.Resize(ref buf, 7);
@@ -112,8 +125,9 @@ namespace Hreidmar.Library
             _writer.Write(buf, 1000, out var wrote);
             buf = new byte[7];
             _reader.Read(buf, 1000, out var read);
+            AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] {wrote} {read}");
             if (Encoding.ASCII.GetString(buf).Contains("LOKE")) AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Successful handshake!");
-            else throw new DeviceConnectionFailedException($"Invalid handshake string: {Encoding.ASCII.GetString(buf)}");
+            else throw new DeviceConnectionFailedException($"Invalid handshake string {Encoding.ASCII.GetString(buf)}");
         }
 
         /// <summary>
@@ -124,7 +138,6 @@ namespace Hreidmar.Library
             _reader?.Dispose();
             _writer?.Dispose();
             _wholeDevice.ReleaseInterface(_interfaceId);
-            _wholeDevice.Close();
         }
     }
 }
