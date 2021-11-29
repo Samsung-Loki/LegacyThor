@@ -1,17 +1,22 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using Hreidmar.Library;
 using Hreidmar.Library.PIT;
+using LibUsbDotNet;
+using LibUsbDotNet.LudnMonoLibUsb;
+using LibUsbDotNet.Main;
+using MonoLibUsb;
 using Spectre.Console;
 
 namespace Hreidmar.Application
 {
     public static class Program
     {
-        public static void Main(string[] args)
-        {
+        public static void Main(string[] args) {
             AnsiConsole.MarkupLine("[green]Welcome to Hreidmar shell![/]");
             DeviceSession session = null;
+            Exception lastException = null;
             while (true) {
                 string cmd = AnsiConsole.Ask<string>("[yellow]>[/] ");
                 string[] cmds = cmd.Split(' ');
@@ -19,9 +24,40 @@ namespace Hreidmar.Application
                     AnsiConsole.MarkupLine($"[red]Command name required![/]");
                 try {
                     switch (cmds[0]) {
+                        case "exception":
+                            if (lastException == null) AnsiConsole.MarkupLine("[red]No exceptions occured yet![/]");
+                            else AnsiConsole.WriteException(lastException);
+                            break;
                         case "init":
-                            session = new DeviceSession();
+                            if (cmds.Length > 1 && int.Parse(cmds[1]) >= UsbDevice.AllLibUsbDevices.Count) {
+                                AnsiConsole.MarkupLine("[red]Invalid device ID![/]");
+                                break;
+                            }
+                            session = cmds.Length > 1 
+                                ? new DeviceSession((MonoUsbDevice)UsbDevice.AllLibUsbDevices[int.Parse(cmds[1])].Device) 
+                                : new DeviceSession();
                             AnsiConsole.MarkupLine($"[green]Success![/]");
+                            break;
+                        case "ls":
+                            var table1 = new Table();
+                            table1.AddColumn("ID");
+                            table1.AddColumn("VID");
+                            table1.AddColumn("PID");
+                            table1.AddColumn("Manufacturer");
+                            table1.AddColumn("Product Name");
+                            table1.AddColumn("Serial Code");
+                            table1.AddColumn("Samsung");
+                            for (var i = 0; i < UsbDevice.AllLibUsbDevices.Count; i++) {
+                                var device = (MonoUsbDevice)UsbDevice.AllLibUsbDevices[i].Device;
+                                if (UsbDevice.LastErrorString.Contains("Access denied", StringComparison.CurrentCultureIgnoreCase))
+                                    throw new Exception("Access denied!");
+                                var samsung = device.Info.Descriptor.VendorID == DeviceSession.SamsungKVid 
+                                              && DeviceSession.SamsungPids.ToList().Contains(device.Info.Descriptor.ProductID);
+                                table1.AddRow(i.ToString(), $"{device.Info.Descriptor.VendorID:X4}", 
+                                    $"{device.Info.Descriptor.ProductID:X4}", device.Info.ManufacturerString, 
+                                    device.Info.ProductString, device.Info.SerialString, samsung.ToString());
+                            }
+                            AnsiConsole.Write(table1);
                             break;
                         case "dispose":
                             session?.Dispose();
@@ -99,6 +135,10 @@ namespace Hreidmar.Application
                             AnsiConsole.MarkupLine($"[bold]<something, something>[/] - Options (sub-commands)");
                             AnsiConsole.MarkupLine($"\n[bold]Commands:[/]");
                             AnsiConsole.MarkupLine($"[bold]readpit <filename> <table,file<filename>>[/] - Read PIT file");
+                            AnsiConsole.MarkupLine($"[bold]exception[/] - Prints last exception info");
+                            AnsiConsole.MarkupLine($"[bold]dispose[/] - Closes current connection");
+                            AnsiConsole.MarkupLine($"[bold]init (id)[/] - Initialize connection");
+                            AnsiConsole.MarkupLine($"[bold]ls[/] - List all LibUSB devices");
                             AnsiConsole.MarkupLine($"[bold]exit[/] - Leave shell");
                             AnsiConsole.MarkupLine($"[bold]help[/] - Print this");
                             break;
@@ -112,6 +152,7 @@ namespace Hreidmar.Application
                 } catch (Exception e) {
                     AnsiConsole.MarkupLine($"[red]Exception occured: {e.Message}[/]");
                     File.WriteAllText("stacktrace.log", e.ToString());
+                    lastException = e;
                 }
             }
         }
