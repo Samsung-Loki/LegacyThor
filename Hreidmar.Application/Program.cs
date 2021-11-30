@@ -52,7 +52,7 @@ namespace Hreidmar.Application
                                 : new DeviceSession(options);
                             AnsiConsole.MarkupLine($"[green]Success![/]");
                             break;
-                        case "ls":
+                        case "lsusb":
                             var table1 = new Table();
                             table1.AddColumn("ID");
                             table1.AddColumn("VID");
@@ -154,7 +154,7 @@ namespace Hreidmar.Application
                             AnsiConsole.MarkupLine($"[bold]init (id)[/] - Initialize connection");
                             AnsiConsole.MarkupLine($"[bold]reboot[/] - Switches reboot option");
                             AnsiConsole.MarkupLine($"[bold]resume[/] - Switches resume option");
-                            AnsiConsole.MarkupLine($"[bold]ls[/] - List all LibUSB devices");
+                            AnsiConsole.MarkupLine($"[bold]lsusb[/] - List all LibUSB devices");
                             AnsiConsole.MarkupLine($"[bold]exit[/] - Leave shell");
                             AnsiConsole.MarkupLine($"[bold]help[/] - Print this");
                             break;
