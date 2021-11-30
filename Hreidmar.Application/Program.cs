@@ -152,6 +152,8 @@ namespace Hreidmar.Application
                             AnsiConsole.MarkupLine($"[bold]exception[/] - Prints last exception info");
                             AnsiConsole.MarkupLine($"[bold]dispose[/] - Closes current connection");
                             AnsiConsole.MarkupLine($"[bold]init (id)[/] - Initialize connection");
+                            AnsiConsole.MarkupLine($"[bold]reboot[/] - Switches reboot option");
+                            AnsiConsole.MarkupLine($"[bold]resume[/] - Switches resume option");
                             AnsiConsole.MarkupLine($"[bold]ls[/] - List all LibUSB devices");
                             AnsiConsole.MarkupLine($"[bold]exit[/] - Leave shell");
                             AnsiConsole.MarkupLine($"[bold]help[/] - Print this");
