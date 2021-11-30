@@ -15,8 +15,10 @@ namespace Hreidmar.Application
     {
         public static void Main(string[] args) {
             AnsiConsole.MarkupLine("[green]Welcome to Hreidmar shell![/]");
+            AnsiConsole.MarkupLine("[yellow]Options will only apply before initialization![/]");
             DeviceSession session = null;
             Exception lastException = null;
+            var options = new DeviceSession.Options();
             while (true) {
                 string cmd = AnsiConsole.Ask<string>("[yellow]>[/] ");
                 string[] cmds = cmd.Split(' ');
@@ -28,14 +30,26 @@ namespace Hreidmar.Application
                             if (lastException == null) AnsiConsole.MarkupLine("[red]No exceptions occured yet![/]");
                             else AnsiConsole.WriteException(lastException);
                             break;
+                        case "reboot":
+                            AnsiConsole.MarkupLine(options.Reboot 
+                                ? "[green]Reboot option disabled![/]"
+                                : "[green]Reboot option enabled![/]");
+                            options.Reboot = !options.Reboot;
+                            break;
+                        case "resume":
+                            AnsiConsole.MarkupLine(options.Resume 
+                                ? "[green]Resume option disabled![/]"
+                                : "[green]Resume option enabled![/]");
+                            options.Resume = !options.Resume;
+                            break;
                         case "init":
                             if (cmds.Length > 1 && int.Parse(cmds[1]) >= UsbDevice.AllLibUsbDevices.Count) {
                                 AnsiConsole.MarkupLine("[red]Invalid device ID![/]");
                                 break;
                             }
                             session = cmds.Length > 1 
-                                ? new DeviceSession((MonoUsbDevice)UsbDevice.AllLibUsbDevices[int.Parse(cmds[1])].Device) 
-                                : new DeviceSession();
+                                ? new DeviceSession((MonoUsbDevice)UsbDevice.AllLibUsbDevices[int.Parse(cmds[1])].Device, options) 
+                                : new DeviceSession(options);
                             AnsiConsole.MarkupLine($"[green]Success![/]");
                             break;
                         case "ls":
