@@ -19,6 +19,7 @@ namespace Hreidmar.Application
             DeviceSession session = null;
             Exception lastException = null;
             var options = new DeviceSession.Options();
+            var exceptionsCount = 0;
             while (true) {
                 string cmd = AnsiConsole.Ask<string>("[yellow]>[/] ");
                 string[] cmds = cmd.Split(' ');
@@ -27,7 +28,27 @@ namespace Hreidmar.Application
                 try {
                     switch (cmds[0]) {
                         case "exception":
-                            if (lastException == null) AnsiConsole.MarkupLine("[red]No exceptions occured yet![/]");
+                            if (lastException == null) {
+                                switch (exceptionsCount) {
+                                    case 20:
+                                        AnsiConsole.MarkupLine("[red]You wanted it? HERE YOU HAVE IT![/]");
+                                        throw new Exception("You fool.");
+                                    case 15:
+                                        AnsiConsole.MarkupLine("[red]Just stop. Please.[/]");
+                                        break;
+                                    case 10:
+                                        AnsiConsole.MarkupLine("[red]NO EXCEPTIONS OCCURED YET!!1![/]");
+                                        break;
+                                    case 5:
+                                        AnsiConsole.MarkupLine("[red]What do you want from me?[/]");
+                                        break;
+                                    default:
+                                        AnsiConsole.MarkupLine("[red]No exceptions occured yet![/]");
+                                        break;
+                                }
+
+                                exceptionsCount++;
+                            }
                             else AnsiConsole.WriteException(lastException);
                             break;
                         case "reboot":
