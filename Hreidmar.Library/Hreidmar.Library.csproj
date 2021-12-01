@@ -9,4 +9,9 @@
       <PackageReference Include="Spectre.Console" Version="0.43.0" />
     </ItemGroup>
 
+    <ItemGroup>
+        <Content Include="libusb-1.0.dll" Condition=" '$(OS)' == 'Windows_NT' ">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
 </Project>
