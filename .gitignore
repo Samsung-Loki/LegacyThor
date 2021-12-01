@@ -1,6 +1,7 @@
 *.pit
 *.zip*
 *.tar*
+*.log
 bin/
 obj/
 /packages/

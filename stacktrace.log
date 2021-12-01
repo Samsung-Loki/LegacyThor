@@ -1,3 +1,0 @@
-Hreidmar.Library.Exceptions.DeviceNotFoundException: No Samsung devices were found!
-   at Hreidmar.Library.DeviceSession..ctor() in /home/theairblow/RiderProjects/Hreidmar/Hreidmar.Library/DeviceSession.cs:line 41
-   at Hreidmar.Application.Program.Main(String[] args) in /home/theairblow/RiderProjects/Hreidmar/Hreidmar.Application/Program.cs:line 23

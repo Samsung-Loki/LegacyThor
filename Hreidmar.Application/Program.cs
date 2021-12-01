@@ -17,9 +17,7 @@ namespace Hreidmar.Application
             AnsiConsole.MarkupLine("[green]Welcome to Hreidmar shell![/]");
             AnsiConsole.MarkupLine("[yellow]Options will only apply before initialization![/]");
             DeviceSession session = null;
-            Exception lastException = null;
-            var options = new DeviceSession.Options();
-            var exceptionsCount = 0;
+            var options = new DeviceSession.OptionsClass();
             while (true) {
                 string cmd = AnsiConsole.Ask<string>("[yellow]>[/] ");
                 string[] cmds = cmd.Split(' ');
@@ -27,29 +25,38 @@ namespace Hreidmar.Application
                     AnsiConsole.MarkupLine($"[red]Command name required![/]");
                 try {
                     switch (cmds[0]) {
-                        case "exception":
-                            if (lastException == null) {
-                                switch (exceptionsCount) {
-                                    case 20:
-                                        AnsiConsole.MarkupLine("[red]You wanted it? HERE YOU HAVE IT![/]");
-                                        throw new Exception("You fool.");
-                                    case 15:
-                                        AnsiConsole.MarkupLine("[red]Just stop. Please.[/]");
-                                        break;
-                                    case 10:
-                                        AnsiConsole.MarkupLine("[red]NO EXCEPTIONS OCCURED YET!!1![/]");
-                                        break;
-                                    case 5:
-                                        AnsiConsole.MarkupLine("[red]What do you want from me?[/]");
-                                        break;
-                                    default:
-                                        AnsiConsole.MarkupLine("[red]No exceptions occured yet![/]");
-                                        break;
-                                }
-
-                                exceptionsCount++;
+                        case "session":
+                            if (session == null) {
+                                AnsiConsole.MarkupLine("[red]No device connection was done yet![/]");
+                                break;
                             }
-                            else AnsiConsole.WriteException(lastException);
+                                
+                            if (cmds.Length < 2) {
+                                AnsiConsole.MarkupLine("[red]Sub-command required![/]");
+                                break;
+                            }
+
+                            switch (cmds[1]) {
+                                case "reboot":
+                                    if (!session.SessionBegan) {
+                                        AnsiConsole.MarkupLine("[red]Session did not began yet![/]");
+                                        break;
+                                    }
+                                    
+                                    session.EndSession();
+                                    if (!session.Options.Reboot)
+                                        session.Reboot();
+                                    break;
+                                case "begin":
+                                    session.BeginSession();
+                                    break;
+                                case "end":
+                                    session.EndSession();
+                                    break;
+                                default:
+                                    AnsiConsole.MarkupLine("[red]Unknown sub-command![/]");
+                                    break;
+                            }
                             break;
                         case "reboot":
                             AnsiConsole.MarkupLine(options.Reboot 
@@ -96,6 +103,7 @@ namespace Hreidmar.Application
                             break;
                         case "dispose":
                             session?.Dispose();
+                            session = null;
                             AnsiConsole.MarkupLine($"[green]Success![/]");
                             break;
                         case "readpit":
@@ -170,7 +178,7 @@ namespace Hreidmar.Application
                             AnsiConsole.MarkupLine($"[bold]<something, something>[/] - Options (sub-commands)");
                             AnsiConsole.MarkupLine($"\n[bold]Commands:[/]");
                             AnsiConsole.MarkupLine($"[bold]readpit <filename> <table,file<filename>>[/] - Read PIT file");
-                            AnsiConsole.MarkupLine($"[bold]exception[/] - Prints last exception info");
+                            AnsiConsole.MarkupLine($"[bold]session <reboot, start, end>[/] - Switches reboot option");
                             AnsiConsole.MarkupLine($"[bold]dispose[/] - Closes current connection");
                             AnsiConsole.MarkupLine($"[bold]init (id)[/] - Initialize connection");
                             AnsiConsole.MarkupLine($"[bold]reboot[/] - Switches reboot option");
@@ -187,9 +195,7 @@ namespace Hreidmar.Application
                             break;
                     }
                 } catch (Exception e) {
-                    AnsiConsole.MarkupLine($"[red]Exception occured: {e.Message}[/]");
-                    File.WriteAllText("stacktrace.log", e.ToString());
-                    lastException = e;
+                    AnsiConsole.WriteException(e);
                 }
             }
         }

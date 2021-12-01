@@ -18,7 +18,7 @@ namespace Hreidmar.Library
     /// </summary>
     public class DeviceSession : IDisposable
     {
-        public class Options
+        public class OptionsClass
         {
             public bool Reboot = false;
             public bool Resume = false;
@@ -37,22 +37,18 @@ namespace Hreidmar.Library
         private int _transferSequenceSize = 800;
         private int _transferPacketSize = 131072;
         private int _transferTimeout = 30000;
-        private bool _sessionBegan = false;
-        private Options _options;
+        public bool SessionBegan = false; 
+        public OptionsClass Options;
 
         /// <summary>
         /// Find a samsung device and initialize it
         /// </summary>
         /// <param name="options">Options</param>
         /// <exception cref="DeviceNotFoundException">No device was found</exception>
-        public DeviceSession(Options options)
+        public DeviceSession(OptionsClass options)
         {
-            _options = options;
-            void CheckForErrors() {
-                if (_error != MonoUsbError.Success) 
-                    throw new Exception($"{_error}");
-            }
-            
+            Options = options;
+
             UsbRegistry found = null;
             foreach (UsbRegistry device in UsbDevice.AllLibUsbDevices) {
                 if (device.Vid != SamsungKVid || !SamsungPids.Contains(device.Pid)) continue;
@@ -75,13 +71,9 @@ namespace Hreidmar.Library
         /// </summary>
         /// <param name="device">USB device</param>
         /// <param name="options">Options</param>
-        public DeviceSession(MonoUsbDevice device, Options options)
+        public DeviceSession(MonoUsbDevice device, OptionsClass options)
         {
-            _options = options;
-            void CheckForErrors() {
-                if (_error != MonoUsbError.Success) 
-                    throw new Exception($"{_error}");
-            }
+            Options = options;
 
             var mono = device;
             if (UsbDevice.LastErrorString.Contains("Access denied", StringComparison.CurrentCultureIgnoreCase))
@@ -97,8 +89,11 @@ namespace Hreidmar.Library
         private void Initialize()
         {
             void CheckForErrors() {
-                if (_error != MonoUsbError.Success) 
-                    throw new Exception($"{_error}");
+                if (_error != MonoUsbError.Success) {
+                    var error = _error;
+                    Dispose();
+                    throw new Exception($"[Initialize/CheckForErrors] {error}");
+                }
             }
             
             AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Driver mode: {_device.DriverMode}");
@@ -145,16 +140,15 @@ namespace Hreidmar.Library
                 AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Detached kernel driver!");
             }
             
+            _error = (MonoUsbError) MonoUsbApi.ResetDevice(_deviceHandle); CheckForErrors();
+
             // Handshake
-            if (!_options.Resume) {
-                _error = (MonoUsbError) MonoUsbApi.ResetDevice(_deviceHandle); CheckForErrors();
+            if (!Options.Resume) {
                 var buf = Encoding.ASCII.GetBytes("ODIN");
-                Array.Resize(ref buf, 7);
                 AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Doing handshake...");
-                _error = (MonoUsbError) MonoUsbApi.BulkTransfer(_deviceHandle, _writeEndpoint, buf, buf.Length, out var sent, 1000); CheckForErrors();
-                buf = new byte[7];
-                _error = (MonoUsbError) MonoUsbApi.BulkTransfer(_deviceHandle, _readEndpoint, buf, buf.Length, out var received, 1000); CheckForErrors();
-                AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Sent {sent}, received {received}");
+                _error = (MonoUsbError) MonoUsbApi.BulkTransfer(_deviceHandle, _writeEndpoint, buf, buf.Length, out _, 1000); CheckForErrors();
+                buf = new byte[4];
+                _error = (MonoUsbError) MonoUsbApi.BulkTransfer(_deviceHandle, _readEndpoint, buf, buf.Length, out _, 1000); CheckForErrors();
                 if (Encoding.ASCII.GetString(buf).Contains("LOKE")) AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Successful handshake!");
                 else throw new DeviceConnectionFailedException($"Invalid handshake string {Encoding.ASCII.GetString(buf)}");
             }
@@ -201,14 +195,14 @@ namespace Hreidmar.Library
                 var error = (MonoUsbError) MonoUsbApi.BulkTransfer(_deviceHandle, _readEndpoint, Array.Empty<byte>(),
                     0, out _, timeout);
                 if (error != MonoUsbError.Success)
-                    AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Failed to send an empty packet");
+                    AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Failed to send an empty packet, ignoring...");
             }
             var code = MonoUsbApi.BulkTransfer(_deviceHandle, _readEndpoint, data, data.Length, out _, timeout);
             if (sendEmptyAfter) {
                 var error = (MonoUsbError) MonoUsbApi.BulkTransfer(_deviceHandle, _readEndpoint, Array.Empty<byte>(),
                     0, out _, timeout);
                 if (error != MonoUsbError.Success)
-                    AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Failed to send an empty packet");
+                    AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Failed to send an empty packet, ignoring...");
             }
             
             return code;
@@ -247,16 +241,16 @@ namespace Hreidmar.Library
         /// <exception cref="Exception">Error occured</exception>
         public void BeginSession()
         {
-            if (_sessionBegan)
+            if (SessionBegan)
                 throw new Exception("Session already began!");
             AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Beginning session...");
             var code = SendPacket(new SessionSetupPacket(), 1000);
             if ((MonoUsbError) code != MonoUsbError.Success)
-                throw new Exception($"{(MonoUsbError)code}");
+                throw new Exception($"Failed to send SessionSetupPacket: {(MonoUsbError)code}");
             var packet = (IInboundPacket) new SessionSetupResponse();
             code = ReadPacket(ref packet, 1000);
             if ((MonoUsbError) code != MonoUsbError.Success)
-                throw new Exception($"{(MonoUsbError)code}");
+                throw new Exception($"Failed to read SessionSetupResponse: {(MonoUsbError)code}");
             var actualPacket = (SessionSetupResponse)packet;
             if (actualPacket.Flags != 0) {
                 AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Changing packet size is not supported!");
@@ -265,10 +259,10 @@ namespace Hreidmar.Library
                 _transferSequenceSize = 30;    // 30 MB per sequence
                 code = SendPacket(new FilePartSizePacket { FileSize = _transferPacketSize }, 1000);
                 if ((MonoUsbError) code != MonoUsbError.Success)
-                    throw new Exception($"{(MonoUsbError)code}");
+                    throw new Exception($"Failed to send FilePartSizePacket: {(MonoUsbError)code}");
                 code = ReadPacket(ref packet, 1000);
                 if ((MonoUsbError) code != MonoUsbError.Success)
-                    throw new Exception($"{(MonoUsbError)code}");
+                    throw new Exception($"Failed to read SessionSetupPacket: {(MonoUsbError)code}");
                 actualPacket = (SessionSetupResponse)packet;
                 if (actualPacket.Flags != 0)
                     throw new Exception($"Received {actualPacket.Flags} instead of 0.");
@@ -276,7 +270,7 @@ namespace Hreidmar.Library
             }
             
             AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Session began!");
-            _sessionBegan = true;
+            SessionBegan = true;
         }
 
         /// <summary>
@@ -286,11 +280,11 @@ namespace Hreidmar.Library
         {
             var code = SendPacket(new RebootDevicePacket(), 1000);
             if ((MonoUsbError) code != MonoUsbError.Success)
-                throw new Exception($"{(MonoUsbError)code}");
+                throw new Exception($"Failed to send RebootDevicePacket: {(MonoUsbError)code}");
             var packet = (IInboundPacket) new EndSessionResponse();
             code = ReadPacket(ref packet, 1000);
             if ((MonoUsbError) code != MonoUsbError.Success)
-                throw new Exception($"{(MonoUsbError)code}");
+                throw new Exception($"Failed to read EndSessionResponse: {(MonoUsbError)code}");
         }
 
         /// <summary>
@@ -298,20 +292,20 @@ namespace Hreidmar.Library
         /// </summary>
         public void EndSession()
         {
-            if (!_sessionBegan)
-                throw new Exception("Session was not started yet!");
+            if (!SessionBegan)
+                throw new Exception("Session has not started yet!");
             AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Ending session...");
             var code = SendPacket(new EndSessionPacket(), 1000);
             if ((MonoUsbError) code != MonoUsbError.Success)
-                throw new Exception($"{(MonoUsbError)code}");
+                throw new Exception($"Failed to send EndSessionPacket: {(MonoUsbError)code}");
             var packet = (IInboundPacket) new EndSessionResponse();
             code = ReadPacket(ref packet, 1000);
             if ((MonoUsbError) code != MonoUsbError.Success)
-                throw new Exception($"{(MonoUsbError)code}");
+                throw new Exception($"Failed to read EndSessionResponse: {(MonoUsbError)code}");
 
-            if (_options.Reboot) Reboot();
+            if (Options.Reboot) Reboot();
             AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Session ended!");
-            _sessionBegan = false;
+            SessionBegan = false;
         }
 
         /// <summary>
@@ -324,9 +318,11 @@ namespace Hreidmar.Library
                     throw new Exception($"{_error}");
             }
             
-            if (_sessionBegan) EndSession();
+            if (SessionBegan) EndSession();
             _error = (MonoUsbError) MonoUsbApi.ReleaseInterface(_deviceHandle, _interfaceId); CheckForErrors();
+            _sessionHandle.Close();
             _deviceHandle.Close();
+            _device.Close();
         }
     }
 }
