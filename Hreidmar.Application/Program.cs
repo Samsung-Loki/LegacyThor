@@ -95,12 +95,12 @@ namespace Hreidmar.Application
                             options.Resume = !options.Resume;
                             break;
                         case "init":
-                            if (cmds.Length > 1 && int.Parse(cmds[1]) >= UsbDevice.AllLibUsbDevices.Count) {
+                            if (cmds.Length > 1 && int.Parse(cmds[1]) >= UsbDevice.AllDevices.Count) {
                                 AnsiConsole.MarkupLine("[red]Invalid device ID![/]");
                                 break;
                             }
                             session = cmds.Length > 1 
-                                ? new DeviceSession((MonoUsbDevice)UsbDevice.AllLibUsbDevices[int.Parse(cmds[1])].Device, options) 
+                                ? new DeviceSession(UsbDevice.AllDevices[int.Parse(cmds[1])].Device, options) 
                                 : new DeviceSession(options);
                             AnsiConsole.MarkupLine($"[green]Success![/]");
                             break;
@@ -115,11 +115,14 @@ namespace Hreidmar.Application
                             table1.AddColumn("Driver Mode");
                             table1.AddColumn("Samsung");
                             for (var i = 0; i < UsbDevice.AllDevices.Count; i++) {
-                                var device = (IUsbDevice)UsbDevice.AllDevices[i].Device;
+                                AnsiConsole.WriteLine(UsbDevice.LastErrorString);
+                                var device = UsbDevice.AllDevices[i].Device;
+                                AnsiConsole.WriteLine(UsbDevice.LastErrorString);
                                 if (UsbDevice.LastErrorString.Contains("Access denied", StringComparison.CurrentCultureIgnoreCase))
                                     throw new Exception("Access denied!");
                                 var samsung = device.Info.Descriptor.VendorID == DeviceSession.SamsungKVid 
                                               && DeviceSession.SamsungPids.ToList().Contains(device.Info.Descriptor.ProductID);
+                                AnsiConsole.WriteLine(UsbDevice.LastErrorString);
                                 table1.AddRow(i.ToString(), $"{device.Info.Descriptor.VendorID:X4}", 
                                     $"{device.Info.Descriptor.ProductID:X4}", device.Info.ManufacturerString, 
                                     device.Info.ProductString, device.Info.SerialString, device.DriverMode.ToString(), 
