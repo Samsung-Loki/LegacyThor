@@ -35,7 +35,7 @@ namespace Hreidmar.Library
         private int _interfaceId = 0xFF;
         private byte _readEndpoint = 0xFF;
         private byte _writeEndpoint = 0xFF;
-        private int _transferSequenceSize = 800;
+        private int _packetsPerSequence = 800;
         private int _transferPacketSize = 131072;
         private int _transferTimeout = 30000;
         public bool SessionBegan = false; 
@@ -257,7 +257,7 @@ namespace Hreidmar.Library
                 AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Changing packet size is not supported!");
                 _transferTimeout = 120000;     // Two minutes...
                 _transferPacketSize = 1048576; // 1 MiB
-                _transferSequenceSize = 30;    // 30 MB per sequence
+                _packetsPerSequence = 30;    // 30 MB per sequence
                 code = SendPacket(new FilePartSizePacket { FileSize = _transferPacketSize }, 1000);
                 if ((MonoUsbError) code != MonoUsbError.Success)
                     throw new Exception($"Failed to send FilePartSizePacket: {(MonoUsbError)code}");
