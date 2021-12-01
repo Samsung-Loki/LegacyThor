@@ -291,6 +291,21 @@ namespace Hreidmar.Library
             var actual = (DeviceTypeResponse) packet;
             return actual.DeviceType;
         }
+        
+        /// <summary>
+        /// Enable T-Flash
+        /// </summary>
+        public void EnableTFlash()
+        {
+            if (!SessionBegan) BeginSession();
+            var code = SendPacket(new EnableTFlashPacket(), 6000);
+            if ((MonoUsbError) code != MonoUsbError.Success)
+                throw new Exception($"Failed to send EnableTFlashPacket: {(MonoUsbError)code}");
+            var packet = (IInboundPacket) new SessionSetupResponse();
+            code = ReadPacket(ref packet, 6000);
+            if ((MonoUsbError) code != MonoUsbError.Success)
+                throw new Exception($"Failed to read SessionSetupResponse: {(MonoUsbError)code}");
+        }
 
         /// <summary>
         /// Reboot your device

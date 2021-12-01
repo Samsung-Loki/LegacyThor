@@ -3,17 +3,17 @@ using System.IO;
 namespace Hreidmar.Library.Packets
 {
     /// <summary>
-    /// Reboot your device
+    /// Enable T-Flash
     /// </summary>
-    public class RebootDevicePacket : IOutboundPacket
+    public class EnableTFlashPacket : IOutboundPacket
     {
         public byte[] Pack()
         {
             var buf = new byte[8];
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryWriter(memory);
-            stream.Write(0x67); // End session control type
-            stream.Write(1);    // Reboot device
+            stream.Write(0x64); // Session type
+            stream.Write(0x05); // Device type flag
             return buf;
         }
     }

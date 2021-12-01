@@ -11,7 +11,7 @@ namespace Hreidmar.Library.Packets
         
         public byte[] Pack()
         {
-            var buf = new byte[1024];
+            var buf = new byte[12];
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryWriter(memory);
             stream.Write(0x64);     // Session control type

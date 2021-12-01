@@ -9,7 +9,7 @@ namespace Hreidmar.Library.Packets
     {
         public byte[] Pack()
         {
-            var buf = new byte[1024];
+            var buf = new byte[8];
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryWriter(memory);
             stream.Write(0x67); // End session control type
