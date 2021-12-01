@@ -332,17 +332,24 @@ namespace Hreidmar.Library
             var buf = new List<byte>();
             var blocks = (int)Math.Ceiling((decimal)size / 500);
             var tmpbuf = new byte[500];
-            for (var i = 0; i < blocks; i++) {
-                code = SendPacket(new DumpPitPacket { Block = i }, 6000);
-                if ((MonoUsbError) code != MonoUsbError.Success)
-                    throw new Exception($"Failed to send DumpPitPacket: {(MonoUsbError)code}");
-                code = Read(ref tmpbuf, 6000, out var read, sendEmptyAfter: i + 1 == blocks);
-                if ((MonoUsbError) code != MonoUsbError.Success)
-                    throw new Exception($"Failed to read PIT dump data: {(MonoUsbError)code}");
-                if (read != 500)
-                    throw new Exception($"Read not enough bytes: {read}");
-                buf.AddRange(tmpbuf);
-            }
+            AnsiConsole.Progress().Start(ctx => {
+                var task = ctx.AddTask("[yellow]Dumping PIT[/]", maxValue: size);
+                for (var i = 0; i < blocks; i++) {
+                    code = SendPacket(new DumpPitPacket { Block = i }, 6000);
+                    if ((MonoUsbError) code != MonoUsbError.Success)
+                        throw new Exception($"Failed to send DumpPitPacket: {(MonoUsbError)code}");
+                    var last = i + 1 == blocks;
+                    code = Read(ref tmpbuf, 6000, out var read, sendEmptyAfter: last);
+                    if ((MonoUsbError) code != MonoUsbError.Success)
+                        throw new Exception($"Failed to read PIT dump data: {(MonoUsbError)code}");
+                    if (read != 500 && !last)
+                        throw new Exception($"Read not enough bytes: {read}");
+                    buf.AddRange(tmpbuf);
+                    task.Increment(read);
+                }
+                task.StopTask();
+                task.Description = "[green]Dumping PIT[/]";
+            });
             code = SendPacket(new EndPitPacket(), 6000);
             if ((MonoUsbError) code != MonoUsbError.Success)
                 throw new Exception($"Failed to send EndPitPacket: {(MonoUsbError)code}");

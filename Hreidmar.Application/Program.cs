@@ -21,10 +21,33 @@ namespace Hreidmar.Application
             while (true) {
                 string cmd = AnsiConsole.Ask<string>("[yellow]>[/] ");
                 string[] cmds = cmd.Split(' ');
-                if (cmds.Length == 0)
+                if (cmds.Length == 0) {
                     AnsiConsole.MarkupLine($"[red]Command name required![/]");
+                    break;
+                }
                 try {
                     switch (cmds[0]) {
+                        case "playground":
+                            if (session == null) {
+                                AnsiConsole.MarkupLine("[red]No device connection was done yet![/]");
+                                break;
+                            }
+                            
+                            AnsiConsole.MarkupLine($"[green]Beginning session...[/]");
+                            session.BeginSession();
+                            
+                            AnsiConsole.MarkupLine($"[green]Getting device type...[/]");
+                            AnsiConsole.MarkupLine($"[green]Type: {session.GetDeviceType()}[/]");
+                            
+                            AnsiConsole.MarkupLine($"[green]Dumping PIT...[/]");
+                            var buf = session.DumpPit();
+                            File.WriteAllBytes("dump.pit", buf);
+                            AnsiConsole.MarkupLine($"[green]Saved as dump.pit![/]");
+
+                            AnsiConsole.MarkupLine($"[green]Rebooting...[/]");
+                            session.Options.Reboot = true;
+                            session.EndSession();
+                            break;
                         case "session":
                             if (session == null) {
                                 AnsiConsole.MarkupLine("[red]No device connection was done yet![/]");
