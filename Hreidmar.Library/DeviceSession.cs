@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Hreidmar.Library.Exceptions;
@@ -163,7 +164,7 @@ namespace Hreidmar.Library
         /// <param name="sendEmptyBefore">Send an empty packet before transfer</param>
         /// <param name="sendEmptyAfter">Send an empty packet after transfer</param>
         /// <returns>Error code</returns>
-        public int Write(byte[] data, int timeout, bool sendEmptyBefore = false, bool sendEmptyAfter = false)
+        public int Write(byte[] data, int timeout, out int wrote, bool sendEmptyBefore = false, bool sendEmptyAfter = false)
         {
             if (sendEmptyBefore) {
                 var error = (MonoUsbError) MonoUsbApi.BulkTransfer(_deviceHandle, _writeEndpoint, Array.Empty<byte>(),
@@ -171,7 +172,7 @@ namespace Hreidmar.Library
                 if (error != MonoUsbError.Success)
                     AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Failed to send an empty packet");
             }
-            var code = MonoUsbApi.BulkTransfer(_deviceHandle, _writeEndpoint, data, data.Length, out _, timeout);
+            var code = MonoUsbApi.BulkTransfer(_deviceHandle, _writeEndpoint, data, data.Length, out wrote, timeout);
             if (sendEmptyAfter) {
                 var error = (MonoUsbError) MonoUsbApi.BulkTransfer(_deviceHandle, _writeEndpoint, Array.Empty<byte>(),
                     0, out _, timeout);
@@ -190,7 +191,7 @@ namespace Hreidmar.Library
         /// <param name="sendEmptyBefore">Send an empty packet before transfer</param>
         /// <param name="sendEmptyAfter">Send an empty packet after transfer</param>
         /// <returns>Error code</returns>
-        public int Read(ref byte[] data, int timeout, bool sendEmptyBefore = false, bool sendEmptyAfter = false)
+        public int Read(ref byte[] data, int timeout, out int read, bool sendEmptyBefore = false, bool sendEmptyAfter = false)
         {
             if (sendEmptyBefore) {
                 var error = (MonoUsbError) MonoUsbApi.BulkTransfer(_deviceHandle, _readEndpoint, Array.Empty<byte>(),
@@ -198,7 +199,7 @@ namespace Hreidmar.Library
                 if (error != MonoUsbError.Success)
                     AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Failed to send an empty packet, ignoring...");
             }
-            var code = MonoUsbApi.BulkTransfer(_deviceHandle, _readEndpoint, data, data.Length, out _, timeout);
+            var code = MonoUsbApi.BulkTransfer(_deviceHandle, _readEndpoint, data, data.Length, out read, timeout);
             if (sendEmptyAfter) {
                 var error = (MonoUsbError) MonoUsbApi.BulkTransfer(_deviceHandle, _readEndpoint, Array.Empty<byte>(),
                     0, out _, timeout);
@@ -218,7 +219,7 @@ namespace Hreidmar.Library
         /// <param name="sendEmptyAfter">Send an empty packet after transfer</param>
         /// <returns>Error code</returns>
         public int SendPacket(IOutboundPacket packet, int timeout, bool sendEmptyBefore = false, bool sendEmptyAfter = false)
-            => Write(packet.Pack(), timeout, sendEmptyBefore, sendEmptyAfter);
+            => Write(packet.Pack(), timeout, out _, sendEmptyBefore, sendEmptyAfter);
 
         /// <summary>
         /// Read a packet
@@ -231,7 +232,9 @@ namespace Hreidmar.Library
         public int ReadPacket(ref IInboundPacket packet, int timeout, bool sendEmptyBefore = false, bool sendEmptyAfter = false)
         {
             var buf = new byte[packet.GetSize()];
-            var code = Read(ref buf, timeout, sendEmptyBefore, sendEmptyAfter);
+            var code = Read(ref buf, timeout, out var read, sendEmptyBefore, sendEmptyAfter);
+            if (read != packet.GetSize())
+                throw new Exception($"Expected {packet.GetSize()}, received {read}");
             packet.Unpack(buf);
             return code;
         }
@@ -309,6 +312,46 @@ namespace Hreidmar.Library
             if (entire.Flags != 0)
                 throw new Exception($"Invalid response: {entire.Flags}");
         }
+
+        /// <summary>
+        /// Dump device's PIT
+        /// </summary>
+        /// <returns>PIT data buffer</returns>
+        public byte[] DumpPit()
+        {
+            if (!SessionBegan) BeginSession();
+            var code = SendPacket(new BeginPitDumpPacket(), 6000);
+            if ((MonoUsbError) code != MonoUsbError.Success)
+                throw new Exception($"Failed to send BeginPitDumpPacket: {(MonoUsbError)code}");
+            var packet = (IInboundPacket) new BeginPitDumpResponse();
+            code = ReadPacket(ref packet, 6000);
+            if ((MonoUsbError) code != MonoUsbError.Success)
+                throw new Exception($"Failed to read BeginPitDumpResponse: {(MonoUsbError)code}");
+            var entire = (BeginPitDumpResponse) packet;
+            var size = entire.Length;
+            var buf = new List<byte>();
+            var blocks = (int)Math.Ceiling((decimal)size / 500);
+            var tmpbuf = new byte[500];
+            for (var i = 0; i < blocks; i++) {
+                code = SendPacket(new DumpPitPacket { Block = i }, 6000);
+                if ((MonoUsbError) code != MonoUsbError.Success)
+                    throw new Exception($"Failed to send DumpPitPacket: {(MonoUsbError)code}");
+                code = Read(ref tmpbuf, 6000, out var read, sendEmptyAfter: i + 1 == blocks);
+                if ((MonoUsbError) code != MonoUsbError.Success)
+                    throw new Exception($"Failed to read PIT dump data: {(MonoUsbError)code}");
+                if (read != 500)
+                    throw new Exception($"Read not enough bytes: {read}");
+                buf.AddRange(tmpbuf);
+            }
+            code = SendPacket(new EndPitPacket(), 6000);
+            if ((MonoUsbError) code != MonoUsbError.Success)
+                throw new Exception($"Failed to send EndPitPacket: {(MonoUsbError)code}");
+            packet = new PitResponse();
+            code = ReadPacket(ref packet, 6000);
+            if ((MonoUsbError) code != MonoUsbError.Success)
+                throw new Exception($"Failed to read PitResponse: {(MonoUsbError)code}");
+            return buf.ToArray();
+        } 
         
         /// <summary>
         /// Report total byte size
