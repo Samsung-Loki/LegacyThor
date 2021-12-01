@@ -13,7 +13,9 @@ namespace Hreidmar.Library.Packets
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryWriter(memory);
             stream.Write(0x64); // Session control type
-            stream.Write(0);    // Begin session
+            stream.Write(0x00); // Begin session
+            stream.Write(0x04); // Protocol v4
+            // TODO: Add ability to change protocol version
             return buf;
         }
     }
