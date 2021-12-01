@@ -6,6 +6,7 @@ using Hreidmar.Library.PIT;
 using LibUsbDotNet;
 using LibUsbDotNet.LudnMonoLibUsb;
 using LibUsbDotNet.Main;
+using LibUsbDotNet.WinUsb;
 using MonoLibUsb;
 using Spectre.Console;
 
@@ -111,16 +112,18 @@ namespace Hreidmar.Application
                             table1.AddColumn("Manufacturer");
                             table1.AddColumn("Product Name");
                             table1.AddColumn("Serial Code");
+                            table1.AddColumn("Driver Mode");
                             table1.AddColumn("Samsung");
-                            for (var i = 0; i < UsbDevice.AllLibUsbDevices.Count; i++) {
-                                var device = (MonoUsbDevice)UsbDevice.AllLibUsbDevices[i].Device;
+                            for (var i = 0; i < UsbDevice.AllDevices.Count; i++) {
+                                var device = (IUsbDevice)UsbDevice.AllDevices[i].Device;
                                 if (UsbDevice.LastErrorString.Contains("Access denied", StringComparison.CurrentCultureIgnoreCase))
                                     throw new Exception("Access denied!");
                                 var samsung = device.Info.Descriptor.VendorID == DeviceSession.SamsungKVid 
                                               && DeviceSession.SamsungPids.ToList().Contains(device.Info.Descriptor.ProductID);
                                 table1.AddRow(i.ToString(), $"{device.Info.Descriptor.VendorID:X4}", 
                                     $"{device.Info.Descriptor.ProductID:X4}", device.Info.ManufacturerString, 
-                                    device.Info.ProductString, device.Info.SerialString, samsung.ToString());
+                                    device.Info.ProductString, device.Info.SerialString, device.DriverMode.ToString(), 
+                                    samsung.ToString());
                             }
                             AnsiConsole.Write(table1);
                             break;
