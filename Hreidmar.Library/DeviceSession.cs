@@ -309,6 +309,25 @@ namespace Hreidmar.Library
             if (entire.Flags != 0)
                 throw new Exception($"Invalid response: {entire.Flags}");
         }
+        
+        /// <summary>
+        /// Report total byte size
+        /// </summary>
+        /// <param name="length">Total byte size</param>
+        public void ReportTotalBytes(long length)
+        {
+            if (!SessionBegan) BeginSession();
+            var code = SendPacket(new TotalBytesPacket { Length = length }, 6000);
+            if ((MonoUsbError) code != MonoUsbError.Success)
+                throw new Exception($"Failed to send TotalBytesPacket: {(MonoUsbError)code}");
+            var packet = (IInboundPacket) new SessionSetupResponse();
+            code = ReadPacket(ref packet, 6000);
+            if ((MonoUsbError) code != MonoUsbError.Success)
+                throw new Exception($"Failed to read SessionSetupResponse: {(MonoUsbError)code}");
+            var entire = (SessionSetupResponse) packet;
+            if (entire.Flags != 0)
+                throw new Exception($"Invalid response: {entire.Flags}");
+        }
 
         /// <summary>
         /// Reboot your device

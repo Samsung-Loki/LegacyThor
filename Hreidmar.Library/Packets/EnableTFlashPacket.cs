@@ -13,7 +13,7 @@ namespace Hreidmar.Library.Packets
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryWriter(memory);
             stream.Write(0x64); // Session type
-            stream.Write(0x05); // Device type flag
+            stream.Write(0x05); // T-Flash flag
             return buf;
         }
     }
