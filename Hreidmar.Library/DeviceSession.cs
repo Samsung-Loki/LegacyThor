@@ -305,6 +305,9 @@ namespace Hreidmar.Library
             code = ReadPacket(ref packet, 6000);
             if ((MonoUsbError) code != MonoUsbError.Success)
                 throw new Exception($"Failed to read SessionSetupResponse: {(MonoUsbError)code}");
+            var entire = (SessionSetupResponse) packet;
+            if (entire.Flags != 0)
+                throw new Exception($"Invalid response: {entire.Flags}");
         }
 
         /// <summary>
