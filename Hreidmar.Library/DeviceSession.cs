@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using Hreidmar.Library.Exceptions;
@@ -148,18 +149,15 @@ namespace Hreidmar.Library
                 _error = MonoUsbApi.ResetDevice(_deviceHandle); CheckForErrors();
             }
 
-            _writer = _device.OpenEndpointWriter((WriteEndpointID) _writeEndpoint, EndpointType.Bulk);
-            _reader = _device.OpenEndpointReader((ReadEndpointID) _readEndpoint, 512, EndpointType.Bulk);
+            _writer = _device.OpenEndpointWriter((WriteEndpointID) _writeEndpoint);
+            _reader = _device.OpenEndpointReader((ReadEndpointID) _readEndpoint);
 
             // Handshake
             if (!Options.Resume) {
-                var buf = Encoding.ASCII.GetBytes("ODIN");
                 AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Doing handshake...");
-                
-                buf = new byte[4];
-                
-                if (Encoding.ASCII.GetString(buf).Contains("LOKE")) AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Successful handshake!");
-                else throw new DeviceConnectionFailedException($"Invalid handshake string {Encoding.ASCII.GetString(buf)}");
+                SendPacket(new HandshakePacket(), 6000);
+                var packet = (IInboundPacket) new HandshakeResponse();
+                ReadPacket(ref packet, 6000);
             }
         }
 
@@ -168,27 +166,49 @@ namespace Hreidmar.Library
         /// </summary>
         /// <param name="data">Data buffer</param>
         /// <param name="timeout">Timeout</param>
+        /// <param name="wrote">Wrote total</param>
         /// <param name="sendEmptyBefore">Send an empty packet before transfer</param>
         /// <param name="sendEmptyAfter">Send an empty packet after transfer</param>
         public void Write(byte[] data, int timeout, out int wrote, bool sendEmptyBefore = false, bool sendEmptyAfter = false)
         {
-            if (sendEmptyBefore) _writer.Write(Array.Empty<byte>(), timeout, out _);
-            _writer.Write(data, timeout, out wrote);
-            if (sendEmptyAfter) _writer.Write(Array.Empty<byte>(), timeout, out _);
+            if (sendEmptyBefore) {
+                var code = _writer.Write(Array.Empty<byte>(), 100, out _);
+                if (code != ErrorCode.Ok)
+                    AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Unable to send an empty packet before: {code}");
+            }
+            var code1 = _writer.Write(data, timeout, out wrote);
+            if (code1 != ErrorCode.Ok)
+                throw new Exception($"Unable to write: {code1}");
+            if (sendEmptyAfter) {
+                var code = _writer.Write(Array.Empty<byte>(), 100, out _);
+                if (code != ErrorCode.Ok)
+                    AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Unable to send an empty packet after: {code}");
+            }
         }
-        
+
         /// <summary>
         /// Read from underlying device
         /// </summary>
         /// <param name="data">Buffer</param>
         /// <param name="timeout">Timeout</param>
+        /// <param name="read">Read total</param>
         /// <param name="sendEmptyBefore">Send an empty packet before transfer</param>
         /// <param name="sendEmptyAfter">Send an empty packet after transfer</param>
         public void Read(ref byte[] data, int timeout, out int read, bool sendEmptyBefore = false, bool sendEmptyAfter = false)
         {
-            if (sendEmptyBefore) _reader.Read(Array.Empty<byte>(), timeout, out _);
-            _reader.Read(data, timeout, out read);
-            if (sendEmptyAfter) _reader.Read(Array.Empty<byte>(), timeout, out _);
+            if (sendEmptyBefore) {
+                var code = _reader.Read(Array.Empty<byte>(), 100, out _);
+                if (code != ErrorCode.Ok)
+                    AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Unable to read an empty packet before: {code}");
+            }
+            var code1 = _reader.Read(data, timeout, out read);
+            if (code1 != ErrorCode.Ok)
+                throw new Exception($"Unable to read: {code1}");
+            if (sendEmptyAfter) {
+                var code = _reader.Read(Array.Empty<byte>(), 100, out _);
+                if (code != ErrorCode.Ok)
+                    AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Unable to read an empty packet after: {code}");
+            }
         }
 
         /// <summary>
@@ -199,7 +219,12 @@ namespace Hreidmar.Library
         /// <param name="sendEmptyBefore">Send an empty packet before transfer</param>
         /// <param name="sendEmptyAfter">Send an empty packet after transfer</param>
         public void SendPacket(IOutboundPacket packet, int timeout, bool sendEmptyBefore = false, bool sendEmptyAfter = false)
-            => Write(packet.Pack(), timeout, out _, sendEmptyBefore, sendEmptyAfter);
+        {
+            File.WriteAllBytes($"{packet.GetType().Name}.packet", packet.Pack());
+            Write(packet.Pack(), timeout, out var wrote, sendEmptyBefore, sendEmptyAfter);
+            if (wrote != packet.GetSize())
+                throw new Exception($"Expected {packet.GetSize()}, sent {wrote}");
+        }
 
         /// <summary>
         /// Read a packet
@@ -226,7 +251,7 @@ namespace Hreidmar.Library
             if (SessionBegan)
                 throw new Exception("Session already began!");
             AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Beginning session...");
-            SendPacket(new SessionSetupPacket(), 1000);
+            SendPacket(new SessionSetupPacket(), 6000);
             var packet = (IInboundPacket) new SessionSetupResponse();
             ReadPacket(ref packet, 6000);
             var actualPacket = (SessionSetupResponse)packet;
@@ -314,7 +339,7 @@ namespace Hreidmar.Library
         /// Report total byte size
         /// </summary>
         /// <param name="length">Total byte size</param>
-        public void ReportTotalBytes(long length)
+        public void ReportTotalBytes(ulong length)
         {
             if (!SessionBegan) BeginSession();
             SendPacket(new TotalBytesPacket { Length = length }, 6000);
@@ -331,9 +356,11 @@ namespace Hreidmar.Library
         public void Reboot()
         {
             if (!SessionBegan) BeginSession();
+            AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Rebooting...");
             SendPacket(new RebootDevicePacket(), 6000);
             var packet = (IInboundPacket) new EndSessionResponse();
             ReadPacket(ref packet, 6000);
+            AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Device rebooted!");
         }
 
         /// <summary>
@@ -341,7 +368,7 @@ namespace Hreidmar.Library
         /// </summary>
         public void EndSession()
         {
-            if (!SessionBegan)
+            if (!SessionBegan) 
                 throw new Exception("Session has not started yet!");
             AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Ending session...");
             SendPacket(new EndSessionPacket(), 6000);

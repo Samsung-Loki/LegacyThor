@@ -19,6 +19,6 @@ namespace Hreidmar.Library.Packets
             Length = stream.ReadInt32();
         }
 
-        public int GetSize() => 4;
+        public int GetSize() => 8;
     }
 }

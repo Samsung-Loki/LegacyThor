@@ -1,22 +1,19 @@
 using System.IO;
+using System.Text;
 
 namespace Hreidmar.Library.Packets
 {
-    /// <summary>
-    /// General PIT end
-    /// </summary>
-    public class EndPitPacket : IOutboundPacket
+    public class HandshakePacket : IOutboundPacket
     {
         public byte[] Pack()
         {
-            var buf = new byte[1024];
+            var buf = new byte[4];
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryWriter(memory);
-            stream.Write(0x65); // PIT type
-            stream.Write(0x03); // End flag
+            stream.Write(Encoding.ASCII.GetBytes("ODIN"));
             return memory.ToArray();
         }
         
-        public int GetSize() => 1024;
+        public int GetSize() => 4;
     }
 }

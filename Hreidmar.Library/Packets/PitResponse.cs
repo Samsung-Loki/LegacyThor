@@ -16,6 +16,6 @@ namespace Hreidmar.Library.Packets
                 throw new Exception("[DeviceTypeResponse] Packet type is invalid");
         }
 
-        public int GetSize() => 4;
+        public int GetSize() => 8;
     }
 }

@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using Hreidmar.Library;
+using Hreidmar.Library.Packets;
 using Hreidmar.Library.PIT;
 using LibUsbDotNet;
 using LibUsbDotNet.LudnMonoLibUsb;
@@ -155,9 +156,9 @@ namespace Hreidmar.Application
                                     table.AddColumn("Partition");
                                     table.AddColumn("Flash Name");
                                     table.AddColumn("FOTA Name");
-                                    foreach (var entry in data.Entries)  
+                                    foreach (var entry in data.Entries)
                                         table.AddRow(entry.Identifier.ToString(), entry.BlockSizeOrOffset.ToString(), 
-                                            entry.BlockCount.ToString(),entry.PartitionName, entry.FlashName, entry.FotaName);
+                                            entry.BlockCount.ToString(), entry.PartitionName, entry.FlashName, entry.FotaName);
                                     AnsiConsole.Write(table);
                                     break;
                                 case "file":

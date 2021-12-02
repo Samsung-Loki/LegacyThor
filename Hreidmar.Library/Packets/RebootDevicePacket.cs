@@ -9,12 +9,14 @@ namespace Hreidmar.Library.Packets
     {
         public byte[] Pack()
         {
-            var buf = new byte[8];
+            var buf = new byte[1024];
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryWriter(memory);
             stream.Write(0x67); // End session control type
             stream.Write(1);    // Reboot device
-            return buf;
+            return memory.ToArray();
         }
+        
+        public int GetSize() => 1024;
     }
 }

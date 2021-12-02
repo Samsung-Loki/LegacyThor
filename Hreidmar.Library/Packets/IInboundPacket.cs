@@ -1,3 +1,6 @@
+using System;
+using System.Linq;
+
 namespace Hreidmar.Library.Packets
 {
     public interface IInboundPacket
