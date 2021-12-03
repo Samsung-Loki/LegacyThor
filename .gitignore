@@ -2,6 +2,7 @@
 *.zip*
 *.tar*
 *.log
+*.packet
 bin/
 obj/
 /packages/

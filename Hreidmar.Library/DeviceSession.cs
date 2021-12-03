@@ -222,7 +222,6 @@ namespace Hreidmar.Library
         /// <param name="sendEmptyAfter">Send an empty packet after transfer</param>
         public void SendPacket(IOutboundPacket packet, int timeout, bool sendEmptyBefore = false, bool sendEmptyAfter = false)
         {
-            File.WriteAllBytes($"{packet.GetType().Name}.packet", packet.Pack());
             Write(packet.Pack(), timeout, out var wrote, sendEmptyBefore, sendEmptyAfter);
             if (wrote == 0)
                 throw new Exception($"Sent nothing!");
