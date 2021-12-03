@@ -9,7 +9,7 @@ namespace Hreidmar.Library.PIT
     {
         public enum BinaryTypeEnum {
             AP = 0,
-            BL = 1,
+            CP = 1,
             Unknown
         }
         

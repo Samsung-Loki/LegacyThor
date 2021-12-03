@@ -1,19 +1,19 @@
 using System.IO;
 
-namespace Hreidmar.Library.Packets
+namespace Hreidmar.Library.Packets.Outbound
 {
     /// <summary>
-    /// Enable T-Flash
+    /// Begin file flash
     /// </summary>
-    public class EnableTFlashPacket : IOutboundPacket
+    public class BeginFileFlashPacket : IOutboundPacket
     {
         public byte[] Pack()
         {
             var buf = new byte[1024];
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryWriter(memory);
-            stream.Write(0x64); // Session type
-            stream.Write(0x05); // T-Flash flag
+            stream.Write(0x66); // File type
+            stream.Write(0x00); // Flash flag
             return memory.ToArray();
         }
         

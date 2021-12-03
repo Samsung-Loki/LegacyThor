@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace Hreidmar.Library.Packets
+namespace Hreidmar.Library.Packets.Inbound
 {
     /// <summary>
     /// Begin PIT dump response
@@ -15,7 +15,7 @@ namespace Hreidmar.Library.Packets
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryReader(memory);
             if (stream.ReadInt32() != 0x65)
-                throw new Exception("[DeviceTypeResponse] Packet type is invalid");
+                throw new Exception("Packet type is invalid");
             Length = stream.ReadInt32();
         }
 

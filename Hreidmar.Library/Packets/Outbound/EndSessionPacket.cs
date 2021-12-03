@@ -1,22 +1,19 @@
 using System.IO;
 
-namespace Hreidmar.Library.Packets
+namespace Hreidmar.Library.Packets.Outbound
 {
     /// <summary>
-    /// Begin PIT dump
+    /// Reboot your device
     /// </summary>
-    public class DumpPitPacket : IOutboundPacket
+    public class EndSessionPacket : IOutboundPacket
     {
-        public int Block;
-        
         public byte[] Pack()
         {
             var buf = new byte[1024];
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryWriter(memory);
-            stream.Write(0x65);  // PIT type
-            stream.Write(0x02);  // File part flag
-            stream.Write(Block); // Current block
+            stream.Write(0x67); // End session control type
+            stream.Write(0);    // End session flag
             return memory.ToArray();
         }
         

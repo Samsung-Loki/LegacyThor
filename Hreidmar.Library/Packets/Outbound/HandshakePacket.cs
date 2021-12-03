@@ -1,7 +1,7 @@
 using System.IO;
 using System.Text;
 
-namespace Hreidmar.Library.Packets
+namespace Hreidmar.Library.Packets.Outbound
 {
     public class HandshakePacket : IOutboundPacket
     {

@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Hreidmar.Library;
 using Hreidmar.Library.Packets;
+using Hreidmar.Library.Packets.Inbound;
+using Hreidmar.Library.Packets.Playground;
 using Hreidmar.Library.PIT;
 using LibUsbDotNet;
 using LibUsbDotNet.LudnMonoLibUsb;
@@ -27,6 +30,7 @@ namespace Hreidmar.Application
                     AnsiConsole.MarkupLine($"[red]Command name required![/]");
                     break;
                 }
+                var stop = new Stopwatch();
                 try {
                     switch (cmds[0]) {
                         case "playground":
@@ -35,19 +39,10 @@ namespace Hreidmar.Application
                                 break;
                             }
                             
-                            AnsiConsole.MarkupLine($"[green]Beginning session...[/]");
                             session.BeginSession();
-                            
-                            AnsiConsole.MarkupLine($"[green]Getting device type...[/]");
-                            AnsiConsole.MarkupLine($"[green]Type: {session.GetDeviceType()}[/]");
-                            
-                            AnsiConsole.MarkupLine($"[green]Dumping PIT...[/]");
-                            var buf = session.DumpPit();
-                            File.WriteAllBytes("dump.pit", buf);
-                            AnsiConsole.MarkupLine($"[green]Saved as dump.pit![/]");
-
-                            AnsiConsole.MarkupLine($"[green]Rebooting...[/]");
-                            session.Options.Reboot = true;
+                            session.SendPacket(new BeginFileDump(), 6000);
+                            var packet = (IInboundPacket) new PlaygroundResponse();
+                            session.ReadPacket(ref packet, 6000);
                             session.EndSession();
                             break;
                         case "session":
@@ -60,23 +55,43 @@ namespace Hreidmar.Application
                                 AnsiConsole.MarkupLine("[red]Sub-command required![/]");
                                 break;
                             }
-
+                            
                             switch (cmds[1]) {
                                 case "reboot":
-                                    if (!session.SessionBegan) {
-                                        AnsiConsole.MarkupLine("[red]Session did not began yet![/]");
-                                        break;
-                                    }
-                                    
-                                    session.EndSession();
-                                    if (!session.Options.Reboot)
-                                        session.Reboot();
+                                    stop.Start();
+                                    session.Reboot();
+                                    stop.Stop();
+                                    AnsiConsole.MarkupLine($"[green]Time elapsed: {stop.Elapsed}[/]");
                                     break;
                                 case "begin":
+                                    stop.Start();
                                     session.BeginSession();
+                                    stop.Stop();
+                                    AnsiConsole.MarkupLine($"[green]Time elapsed: {stop.Elapsed}[/]");
                                     break;
                                 case "end":
+                                    stop.Start();
                                     session.EndSession();
+                                    stop.Stop();
+                                    AnsiConsole.MarkupLine($"[green]Time elapsed: {stop.Elapsed}[/]");
+                                    break;
+                                case "pitdump":
+                                    stop.Start();
+                                    if (cmds.Length < 3) {
+                                        AnsiConsole.MarkupLine("[red]Filename required![/]");
+                                        break;
+                                    }
+
+                                    File.WriteAllBytes(cmds[2], session.DumpPit());
+                                    AnsiConsole.MarkupLine($"[green]Dump saved as {cmds[2]}![/]");
+                                    stop.Stop();
+                                    AnsiConsole.MarkupLine($"[green]Time elapsed: {stop.Elapsed}[/]");
+                                    break;
+                                case "tflash":
+                                    stop.Start();
+                                    session.EnableTFlash();
+                                    stop.Stop();
+                                    AnsiConsole.MarkupLine($"[green]Time elapsed: {stop.Elapsed}[/]");
                                     break;
                                 default:
                                     AnsiConsole.MarkupLine("[red]Unknown sub-command![/]");
@@ -96,6 +111,7 @@ namespace Hreidmar.Application
                             options.Resume = !options.Resume;
                             break;
                         case "init":
+                            stop.Start();
                             if (cmds.Length > 1 && int.Parse(cmds[1]) >= UsbDevice.AllDevices.Count) {
                                 AnsiConsole.MarkupLine("[red]Invalid device ID![/]");
                                 break;
@@ -103,7 +119,8 @@ namespace Hreidmar.Application
                             session = cmds.Length > 1 
                                 ? new DeviceSession(UsbDevice.AllDevices[int.Parse(cmds[1])].Device, options) 
                                 : new DeviceSession(options);
-                            AnsiConsole.MarkupLine($"[green]Success![/]");
+                            stop.Stop();
+                            AnsiConsole.MarkupLine($"[green]Time elapsed: {stop.Elapsed}[/]");
                             break;
                         case "lsusb":
                             var table1 = new Table();
@@ -208,7 +225,7 @@ namespace Hreidmar.Application
                             AnsiConsole.MarkupLine($"[bold]<something, something>[/] - Options (sub-commands)");
                             AnsiConsole.MarkupLine($"\n[bold]Commands:[/]");
                             AnsiConsole.MarkupLine($"[bold]readpit <filename> <table,file<filename>>[/] - Read PIT file");
-                            AnsiConsole.MarkupLine($"[bold]session <reboot, start, end>[/] - Switches reboot option");
+                            AnsiConsole.MarkupLine($"[bold]session <reboot, start, end, pitdump, tflash>[/] - Session stuff");
                             AnsiConsole.MarkupLine($"[bold]dispose[/] - Closes current connection");
                             AnsiConsole.MarkupLine($"[bold]init (id)[/] - Initialize connection");
                             AnsiConsole.MarkupLine($"[bold]reboot[/] - Switches reboot option");

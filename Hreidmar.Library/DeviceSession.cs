@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using Hreidmar.Library.Exceptions;
 using Hreidmar.Library.Packets;
+using Hreidmar.Library.Packets.Inbound;
+using Hreidmar.Library.Packets.Outbound;
 using Hreidmar.Library.PIT;
 using LibUsbDotNet;
 using LibUsbDotNet.Descriptors;
@@ -222,8 +224,8 @@ namespace Hreidmar.Library
         {
             File.WriteAllBytes($"{packet.GetType().Name}.packet", packet.Pack());
             Write(packet.Pack(), timeout, out var wrote, sendEmptyBefore, sendEmptyAfter);
-            if (wrote != packet.GetSize())
-                throw new Exception($"Expected {packet.GetSize()}, sent {wrote}");
+            if (wrote == 0)
+                throw new Exception($"Sent nothing!");
         }
 
         /// <summary>
@@ -237,8 +239,8 @@ namespace Hreidmar.Library
         {
             var buf = new byte[packet.GetSize()];
             Read(ref buf, timeout, out var read, sendEmptyBefore, sendEmptyAfter);
-            if (read != packet.GetSize())
-                throw new Exception($"Expected {packet.GetSize()}, received {read}");
+            if (read == 0)
+                throw new Exception($"Received nothing!");
             packet.Unpack(buf);
         }
 
@@ -292,12 +294,14 @@ namespace Hreidmar.Library
         public void EnableTFlash()
         {
             if (!SessionBegan) BeginSession();
+            AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Enabling T-Flash...");
             SendPacket(new EnableTFlashPacket(), 6000);
             var packet = (IInboundPacket) new SessionSetupResponse();
             ReadPacket(ref packet, 6000);
             var entire = (SessionSetupResponse) packet;
             if (entire.Flags != 0)
                 throw new Exception($"Invalid response: {entire.Flags}");
+            AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] T-Flash enabled!");
         }
 
         /// <summary>
@@ -318,9 +322,9 @@ namespace Hreidmar.Library
             AnsiConsole.Progress().Start(ctx => {
                 var task = ctx.AddTask("[yellow]Dumping PIT[/]", maxValue: size);
                 for (var i = 0; i < blocks; i++) {
-                    SendPacket(new DumpPitPacket { Block = i }, 6000);
                     var last = i + 1 == blocks;
-                    Read(ref tmpbuf, 6000, out var read, sendEmptyAfter: last);
+                    SendPacket(new DumpPitPacket { Block = i }, 6000);
+                    Read(ref tmpbuf, 6000, out var read);
                     if (read != 500 && !last)
                         throw new Exception($"Read not enough bytes: {read}");
                     buf.AddRange(tmpbuf);
@@ -355,7 +359,6 @@ namespace Hreidmar.Library
         /// </summary>
         public void Reboot()
         {
-            if (!SessionBegan) BeginSession();
             AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Rebooting...");
             SendPacket(new RebootDevicePacket(), 6000);
             var packet = (IInboundPacket) new EndSessionResponse();
@@ -378,6 +381,51 @@ namespace Hreidmar.Library
             if (Options.Reboot) Reboot();
             AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Session ended!");
             SessionBegan = false;
+        }
+
+        /// <summary>
+        /// Flash partition info table
+        /// </summary>
+        /// <param name="data">PIT buffer</param>
+        public void FlashPit(byte[] data)
+        {
+            AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Flashing PIT...");
+            SendPacket(new BeginPitFlashPacket(), 6000);
+            var packet = (IInboundPacket) new PitResponse();
+            ReadPacket(ref packet, 6000);
+            SendPacket(new PitFlashPacket { Length = data.Length }, 6000);
+            ReadPacket(ref packet, 6000);
+            Write(data, 6000, out var wrote);
+            if (wrote != data.Length)
+                throw new Exception($"PIT flash failed: Buffer length {data.Length}, sent only {wrote}");
+            ReadPacket(ref packet, 6000);
+            SendPacket(new EndPitPacket(), 6000);
+            ReadPacket(ref packet, 6000);
+            AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Successful transfer!");
+        }
+
+        /// <summary>
+        /// Flash a file
+        /// </summary>
+        /// <param name="stream">File stream</param>
+        /// <param name="entry">PIT entry</param>
+        public void FlashFile(FileStream stream, PitEntry entry)
+        {
+            AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Flashing {entry.PartitionName}...");
+            stream.Seek(0, SeekOrigin.Begin); // Failsafe
+            SendPacket(new BeginFileFlashPacket(), 6000);
+            var packet = (IInboundPacket) new FileResponse();
+            ReadPacket(ref packet, 6000);
+
+            var sequence = _packetsPerSequence * _transferPacketSize;
+            // ReSharper disable once PossibleLossOfFraction
+            var count = (int)Math.Ceiling((double)(stream.Length / sequence));
+            for (var i = 0; i <= count; i++)
+            {
+                long read = i * sequence;
+                long left = stream.Length - read;
+                var size = Math.Min(_packetsPerSequence, left / _packetsPerSequence);
+            }
         }
 
         /// <summary>

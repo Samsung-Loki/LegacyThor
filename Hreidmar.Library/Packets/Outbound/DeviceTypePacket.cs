@@ -1,19 +1,19 @@
 using System.IO;
 
-namespace Hreidmar.Library.Packets
+namespace Hreidmar.Library.Packets.Outbound
 {
     /// <summary>
-    /// Reboot your device
+    /// Get device type
     /// </summary>
-    public class RebootDevicePacket : IOutboundPacket
+    public class DeviceTypePacket : IOutboundPacket
     {
         public byte[] Pack()
         {
             var buf = new byte[1024];
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryWriter(memory);
-            stream.Write(0x67); // End session control type
-            stream.Write(1);    // Reboot device
+            stream.Write(0x64); // Session type
+            stream.Write(0x01); // Device type flag
             return memory.ToArray();
         }
         

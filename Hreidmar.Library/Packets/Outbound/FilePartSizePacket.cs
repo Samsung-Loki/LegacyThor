@@ -1,19 +1,22 @@
 using System.IO;
 
-namespace Hreidmar.Library.Packets
+namespace Hreidmar.Library.Packets.Outbound
 {
     /// <summary>
-    /// Reboot your device
+    /// File part size packet
     /// </summary>
-    public class EndSessionPacket : IOutboundPacket
+    public class FilePartSizePacket : IOutboundPacket
     {
+        public int FileSize = 0;
+        
         public byte[] Pack()
         {
             var buf = new byte[1024];
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryWriter(memory);
-            stream.Write(0x67); // End session control type
-            stream.Write(0);    // End session flag
+            stream.Write(0x64);     // Session control type
+            stream.Write(5);        // File part size flag
+            stream.Write(FileSize); // File part size value
             return memory.ToArray();
         }
         

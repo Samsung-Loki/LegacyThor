@@ -1,22 +1,22 @@
 using System.IO;
 
-namespace Hreidmar.Library.Packets
+namespace Hreidmar.Library.Packets.Outbound
 {
     /// <summary>
-    /// File part size packet
+    /// Begin file sequence flash
     /// </summary>
-    public class FilePartSizePacket : IOutboundPacket
+    public class BeginFileSequenceFlashPacket : IOutboundPacket
     {
-        public int FileSize = 0;
+        public int Length;
         
         public byte[] Pack()
         {
             var buf = new byte[1024];
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryWriter(memory);
-            stream.Write(0x64);     // Session control type
-            stream.Write(5);        // File part size flag
-            stream.Write(FileSize); // File part size value
+            stream.Write(0x66);   // File type
+            stream.Write(0x02);   // Flash flag
+            stream.Write(Length); // Size
             return memory.ToArray();
         }
         

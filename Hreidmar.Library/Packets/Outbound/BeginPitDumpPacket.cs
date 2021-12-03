@@ -1,11 +1,11 @@
 using System.IO;
 
-namespace Hreidmar.Library.Packets
+namespace Hreidmar.Library.Packets.Outbound
 {
     /// <summary>
-    /// General PIT end
+    /// Begin PIT dump
     /// </summary>
-    public class EndPitPacket : IOutboundPacket
+    public class BeginPitDumpPacket : IOutboundPacket
     {
         public byte[] Pack()
         {
@@ -13,7 +13,7 @@ namespace Hreidmar.Library.Packets
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryWriter(memory);
             stream.Write(0x65); // PIT type
-            stream.Write(0x03); // End flag
+            stream.Write(0x01); // Dump flag
             return memory.ToArray();
         }
         

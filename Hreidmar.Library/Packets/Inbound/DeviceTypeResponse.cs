@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using Hreidmar.Library.PIT;
 
-namespace Hreidmar.Library.Packets
+namespace Hreidmar.Library.Packets.Inbound
 {
     /// <summary>
     /// Session setup response
@@ -16,7 +16,7 @@ namespace Hreidmar.Library.Packets
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryReader(memory);
             if (stream.ReadInt32() != 0x64)
-                throw new Exception("[DeviceTypeResponse] Packet type is invalid");
+                throw new Exception("Packet type is invalid");
             DeviceType = (PitEntry.DeviceTypeEnum) stream.ReadInt32();
         }
 

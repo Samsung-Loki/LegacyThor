@@ -1,19 +1,19 @@
 using System.IO;
 
-namespace Hreidmar.Library.Packets
+namespace Hreidmar.Library.Packets.Outbound
 {
     /// <summary>
-    /// Get device type
+    /// General PIT end
     /// </summary>
-    public class DeviceTypePacket : IOutboundPacket
+    public class EndPitPacket : IOutboundPacket
     {
         public byte[] Pack()
         {
             var buf = new byte[1024];
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryWriter(memory);
-            stream.Write(0x64); // Session type
-            stream.Write(0x01); // Device type flag
+            stream.Write(0x65); // PIT type
+            stream.Write(0x03); // End flag
             return memory.ToArray();
         }
         
