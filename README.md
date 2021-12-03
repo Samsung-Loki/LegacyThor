@@ -8,10 +8,10 @@ Written purely in C#. Uses [LibUsbDotNet](https://github.com/LibUsbDotNet/LibUsb
 
 ## Speed comparison
 ### Hreidmar
-Initialization: `Time elapsed: 00:00:00.1894281`
+Initialization: `Time elapsed: 00:00:00.1894281` \
 PIT dump: `Time elapsed: 00:00:00.5723355`
 ### Heimdall
-Initialization: `~5 seconds`
+Initialization: `~5 seconds` \
 PIT dump: `~5 seconds`
 
 ## How to use
