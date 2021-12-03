@@ -6,8 +6,18 @@
 Hreidmar is an alternative to well-known [Heimdall](https://github.com/Benjamin-Dobell/Heimdall). \
 Written purely in C#. Uses [LibUsbDotNet](https://github.com/LibUsbDotNet/LibUsbDotNet) for communication.
 
+## Speed comparison
+### Hreidmar
+Initialization: `Time elapsed: 00:00:00.1894281`
+PIT dump: `Time elapsed: 00:00:00.5723355`
+### Heimdall
+Initialization: `~5 seconds`
+PIT dump: `~5 seconds`
+
 ## How to use
-Library is in development.
+Hreimdar CLI is a sort-of a shell. \
+It has various commands for you to manage your current device connection. \
+Type `help` for list of available commands.
 
 ## Credits
 [TheAirBlow](https://github.com/theairblow) for Hreidmar
