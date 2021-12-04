@@ -12,7 +12,7 @@ namespace Hreidmar.Library.Packets.Inbound
         {
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryReader(memory);
-            if (stream.ReadInt32() != 0x67)
+            if (stream.ReadInt32() != (int)PacketType.EndSession)
                 throw new Exception("Packet type is invalid");
         }
 

@@ -12,8 +12,8 @@ namespace Hreidmar.Library.Packets.Outbound
             var buf = new byte[1024];
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryWriter(memory);
-            stream.Write(0x67); // End session control type
-            stream.Write(1);    // Reboot device
+            stream.Write((int)PacketType.EndSession);
+            stream.Write((int)EndSessionCommands.Reboot);
             return memory.ToArray();
         }
         

@@ -9,7 +9,6 @@ namespace Hreidmar.Library.Packets.Outbound
     public class EndFileSequenceModemFlashPacket : IOutboundPacket
     {
         public int Length;
-        public int Identifier;
         public bool IsLastSequence;
         public PitEntry.DeviceTypeEnum DeviceType;
 
@@ -18,13 +17,12 @@ namespace Hreidmar.Library.Packets.Outbound
             var buf = new byte[1024];
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryWriter(memory);
-            stream.Write(0x66);                   // File type
-            stream.Write(0x03);                   // End flag
+            stream.Write((int)PacketType.File);
+            stream.Write((int)SharedCommands.End);
             stream.Write(0x01);                   // Modem flag
             stream.Write(Length);                 // Size
             stream.Write(0x00);                   // Unknown
             stream.Write((int)DeviceType);        // Device Type
-            stream.Write(Identifier);             // Identifier
             stream.Write(IsLastSequence ? 1 : 0); // Is last sequence
             return memory.ToArray();
         }

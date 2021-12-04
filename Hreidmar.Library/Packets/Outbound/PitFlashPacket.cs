@@ -14,9 +14,9 @@ namespace Hreidmar.Library.Packets.Outbound
             var buf = new byte[1024];
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryWriter(memory);
-            stream.Write(0x65);   // PIT type
-            stream.Write(0x02);   // Begin flag
-            stream.Write(Length); // Byte length
+            stream.Write((int)PacketType.Pit);
+            stream.Write((int)SharedCommands.FilePart); // It's begin, actually.
+            stream.Write(Length);
             return memory.ToArray();
         }
         

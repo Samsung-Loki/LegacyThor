@@ -4,8 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Hreidmar.Library;
-using Hreidmar.Library.Packets.Inbound;
-using Hreidmar.Library.Packets.Playground;
 using Hreidmar.Library.PIT;
 using K4os.Compression.LZ4.Streams;
 using LibUsbDotNet;
@@ -32,18 +30,6 @@ namespace Hreidmar.Application
                 var stop = new Stopwatch();
                 try {
                     switch (cmds[0]) {
-                        case "playground":
-                            if (session == null) {
-                                AnsiConsole.MarkupLine("[red]No device connection was done yet![/]");
-                                break;
-                            }
-                            
-                            session.BeginSession();
-                            session.SendPacket(new BeginFileDump(), 6000);
-                            var packet = (IInboundPacket) new PlaygroundResponse();
-                            session.ReadPacket(ref packet, 6000);
-                            session.EndSession();
-                            break;
                         case "session":
                             if (session == null) {
                                 AnsiConsole.MarkupLine("[red]No device connection was done yet![/]");

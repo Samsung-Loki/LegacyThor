@@ -14,7 +14,7 @@ namespace Hreidmar.Library.Packets.Inbound
         {
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryReader(memory);
-            if (stream.ReadInt32() != 0x65)
+            if (stream.ReadInt32() != (int)PacketType.Pit)
                 throw new Exception("Packet type is invalid");
             Length = stream.ReadInt32();
         }

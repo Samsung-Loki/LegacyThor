@@ -12,8 +12,8 @@ namespace Hreidmar.Library.Packets.Outbound
             var buf = new byte[1024];
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryWriter(memory);
-            stream.Write(0x66); // File type
-            stream.Write(0x00); // Flash flag
+            stream.Write((int)PacketType.File);
+            stream.Write((int)SharedCommands.Flash);
             return memory.ToArray();
         }
         

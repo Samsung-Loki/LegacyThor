@@ -12,8 +12,8 @@ namespace Hreidmar.Library.Packets.Outbound
             var buf = new byte[1024];
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryWriter(memory);
-            stream.Write(0x64); // Session type
-            stream.Write(0x05); // T-Flash flag
+            stream.Write((int)PacketType.Session); // Session type
+            stream.Write((int)SessionCommands.TFlash); // T-Flash flag
             return memory.ToArray();
         }
         
