@@ -26,8 +26,8 @@ namespace Hreidmar.Library
         public enum Protocol
         {
             ODIN_PROTOCOL_UNKNOWN = -1,
-            ODIN_PROTOCOL_V3,
-            ODIN_PROTOCOL_V4
+            ODIN_PROTOCOL_V3 = 1,
+            ODIN_PROTOCOL_V4 = 2
         };
 
         public class OptionsClass
