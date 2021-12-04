@@ -25,6 +25,7 @@ namespace Hreidmar.Application
             AnsiConsole.MarkupLine("[green]Welcome to Hreidmar shell![/]");
             DeviceSession session = null;
             var options = new DeviceSession.OptionsClass();
+            var queue = new Dictionary<string, PitEntry>();
             while (true) {
                 string cmd = AnsiConsole.Ask<string>("[yellow]>[/] ");
                 string[] cmds = cmd.Split(' ');
@@ -77,84 +78,9 @@ namespace Hreidmar.Application
                                     stop.Stop();
                                     AnsiConsole.MarkupLine($"[green]Time elapsed: {stop.Elapsed}[/]");
                                     break;
-                                case "pitdump":
-                                    if (cmds.Length < 3) {
-                                        AnsiConsole.MarkupLine("[red]Filename required![/]");
-                                        break;
-                                    }
-                                    
-                                    stop.Start();
-                                    AnsiConsole.Progress()
-                                        .Start(ctx => {
-                                            using var stream = new FileStream(cmds[2], FileMode.Open, FileAccess.Read);
-                                            var task = ctx.AddTask($"[yellow]Dumping PIT[/]");
-                                            var pit = session.DumpPit(i => task.Increment(i));
-                                            File.WriteAllBytes(cmds[2], pit);
-                                            task.Description = "[green]Dumping PIT[/]";
-                                            task.StopTask();
-                                        });
-                                    AnsiConsole.MarkupLine($"[green]Dump saved as {cmds[2]}![/]");
-                                    stop.Stop();
-                                    AnsiConsole.MarkupLine($"[green]Time elapsed: {stop.Elapsed}[/]");
-                                    break;
                                 case "tflash":
                                     stop.Start();
                                     session.EnableTFlash();
-                                    stop.Stop();
-                                    AnsiConsole.MarkupLine($"[green]Time elapsed: {stop.Elapsed}[/]");
-                                    break;
-                                case "pitflash":
-                                    if (cmds.Length < 3) {
-                                        AnsiConsole.MarkupLine("[red]Filename required![/]");
-                                        break;
-                                    }
-                                    
-                                    stop.Start();
-                                    AnsiConsole.Markup("[yellow]This may render your device unbootable and hardbricked![/]");
-                                    if (AnsiConsole.Confirm("[yellow]Do you really want to do this?[/]", false))
-                                        session.FlashPit(File.ReadAllBytes(cmds[2]));
-                                    stop.Stop();
-                                    AnsiConsole.MarkupLine($"[green]Time elapsed: {stop.Elapsed}[/]");
-                                    break;
-                                case "flash":
-                                    if (cmds.Length < 4) {
-                                        AnsiConsole.MarkupLine("[red]Filename and partition name required![/]");
-                                        break;
-                                    }
-                                    
-                                    stop.Start();
-                                    if (!session.SessionBegan) session.BeginSession();
-                                    PitData pit = null;
-                                    AnsiConsole.Progress()
-                                        .Start(ctx => {
-                                            using var stream = new FileStream(cmds[2], FileMode.Open, FileAccess.Read);
-                                            var task = ctx.AddTask($"[yellow]Dumping PIT[/]");
-                                            pit = PitData.FromBytes(session.DumpPit(i => task.Increment(i)));
-                                            task.Description = "[green]Dumping PIT[/]";
-                                            task.StopTask();
-                                        });
-                                    var entry = pit.Entries.FirstOrDefault(x => x.PartitionName == cmds[3]);
-                                    if (entry == null) {
-                                        AnsiConsole.MarkupLine("[red]Partition does not exist![/]");
-                                        break;
-                                    }
-                                    
-                                    AnsiConsole.MarkupLine($"[green]Identifier:[/] {entry.Identifier}");
-                                    AnsiConsole.MarkupLine($"[green]Flash name:[/] {entry.FlashName}");
-                                    AnsiConsole.MarkupLine($"[green]Binary Type:[/] {entry.BinaryType}");
-                                    if (AnsiConsole.Confirm("[yellow]Do you really want to flash this file?[/]", false)) {
-                                        AnsiConsole.Progress()
-                                            .Start(ctx => {
-                                                using var stream = new FileStream(cmds[2], FileMode.Open, FileAccess.Read);
-                                                var task = ctx.AddTask($"[yellow]Flashing {entry.PartitionName}[/]");
-                                                session.ReportTotalBytes(new List<ulong> { (ulong)stream.Length });
-                                                session.FlashFile(stream, entry, i => task.Increment(i));
-                                                task.Description = $"[green]Flashing {entry.PartitionName}[/]";
-                                                task.StopTask();
-                                            });
-                                    }
-
-                                    session.EndSession();
                                     stop.Stop();
                                     AnsiConsole.MarkupLine($"[green]Time elapsed: {stop.Elapsed}[/]");
                                     break;
@@ -176,6 +102,154 @@ namespace Hreidmar.Application
                                 : "[green]Resume option enabled![/]");
                             if (session != null) session.Options.Resume = !session.Options.Resume;
                             else options.Resume = !options.Resume;
+                            break;
+                        case "pitdump":
+                            if (session == null) {
+                                AnsiConsole.MarkupLine("[red]No device connection was done yet![/]");
+                                break;
+                            }
+                            
+                            if (cmds.Length < 3) { 
+                                AnsiConsole.MarkupLine("[red]Filename required![/]");
+                                break;
+                            }
+                                                                        
+                            stop.Start();
+                            AnsiConsole.Progress()
+                                .Start(ctx => {
+                                    using var stream = new FileStream(cmds[2], FileMode.Open, FileAccess.Read);
+                                    var task = ctx.AddTask($"[yellow]Dumping PIT[/]");
+                                    var pit = session.DumpPit(i => task.Increment(i));
+                                    File.WriteAllBytes(cmds[2], pit);
+                                    task.Description = "[green]Dumping PIT[/]";
+                                    task.StopTask();
+                                });
+                            AnsiConsole.MarkupLine($"[green]Dump saved as {cmds[2]}![/]");
+                            stop.Stop();
+                            AnsiConsole.MarkupLine($"[green]Time elapsed: {stop.Elapsed}[/]");
+                            break;
+                        case "pitflash":
+                            if (session == null) {
+                                AnsiConsole.MarkupLine("[red]No device connection was done yet![/]");
+                                break;
+                            }
+                            
+                            if (cmds.Length < 3) {
+                                AnsiConsole.MarkupLine("[red]Filename required![/]");
+                                break;
+                            }
+                                    
+                            stop.Start();
+                            AnsiConsole.Markup("[yellow]This may render your device unbootable and hardbricked![/]");
+                            if (AnsiConsole.Confirm("[yellow]Do you really want to do this?[/]", false))
+                                session.FlashPit(File.ReadAllBytes(cmds[2]));
+                            stop.Stop();
+                            AnsiConsole.MarkupLine($"[green]Time elapsed: {stop.Elapsed}[/]");
+                            break;
+                        case "flash":
+                            if (session == null) {
+                                AnsiConsole.MarkupLine("[red]No device connection was done yet![/]");
+                                break;
+                            }
+                            
+                            if (cmds.Length < 4) {
+                                AnsiConsole.MarkupLine("[red]Filename and partition name required![/]");
+                                break;
+                            }
+                                    
+                            stop.Start();
+                            if (!session.SessionBegan) session.BeginSession();
+                            PitData pit = null;
+                            AnsiConsole.Progress()
+                                .Start(ctx => {
+                                    using var stream = new FileStream(cmds[2], FileMode.Open, FileAccess.Read);
+                                    var task = ctx.AddTask($"[yellow]Dumping PIT[/]");
+                                    pit = PitData.FromBytes(session.DumpPit(i => task.Increment(i)));
+                                    task.Description = "[green]Dumping PIT[/]";
+                                    task.StopTask();
+                                });
+                            var entry2 = pit.Entries.FirstOrDefault(x => x.PartitionName == cmds[3]);
+                            if (entry2 == null) {
+                                AnsiConsole.MarkupLine("[red]Partition does not exist![/]");
+                                break;
+                            }
+                                    
+                            AnsiConsole.MarkupLine($"[green]Identifier:[/] {entry2.Identifier}");
+                            AnsiConsole.MarkupLine($"[green]Flash name:[/] {entry2.FlashName}");
+                            AnsiConsole.MarkupLine($"[green]Binary Type:[/] {entry2.BinaryType}");
+                            if (AnsiConsole.Confirm("[yellow]Do you really want to flash this file?[/]", false)) {
+                                AnsiConsole.Progress()
+                                    .Start(ctx => {
+                                        using var stream = new FileStream(cmds[2], FileMode.Open, FileAccess.Read);
+                                        var task = ctx.AddTask($"[yellow]Flashing {entry2.PartitionName}[/]");
+                                        session.ReportTotalBytes(new List<ulong> { (ulong)stream.Length });
+                                        session.FlashFile(stream, entry2, i => task.Increment(i));
+                                        task.Description = $"[green]Flashing {entry2.PartitionName}[/]";
+                                        task.StopTask();
+                                    });
+                            }
+
+                            session.EndSession();
+                            stop.Stop();
+                            AnsiConsole.MarkupLine($"[green]Time elapsed: {stop.Elapsed}[/]");
+                            break;
+                        case "enqueue":
+                            if (cmds.Length < 4) {
+                                        AnsiConsole.MarkupLine("[red]Filename and partition name required![/]");
+                                        break;
+                            }
+                                    
+                            stop.Start();
+                            if (!session.SessionBegan) session.BeginSession();
+                            PitData pit1 = null;
+                            AnsiConsole.Progress()
+                                .Start(ctx => {
+                                    using var stream = new FileStream(cmds[2], FileMode.Open, FileAccess.Read);
+                                    var task = ctx.AddTask($"[yellow]Dumping PIT[/]");
+                                    pit1 = PitData.FromBytes(session.DumpPit(i => task.Increment(i)));
+                                    task.Description = "[green]Dumping PIT[/]";
+                                    task.StopTask();
+                                });
+                            var entry3 = pit1.Entries.FirstOrDefault(x => x.PartitionName == cmds[3]);
+                            if (entry3 == null) {
+                                AnsiConsole.MarkupLine("[red]Partition does not exist![/]");
+                                break;
+                            }
+                                    
+                            AnsiConsole.MarkupLine($"[green]Identifier:[/] {entry3.Identifier}");
+                            AnsiConsole.MarkupLine($"[green]Flash name:[/] {entry3.FlashName}");
+                            AnsiConsole.MarkupLine($"[green]Binary Type:[/] {entry3.BinaryType}");
+                            if (AnsiConsole.Confirm("[yellow]Do you really want to enqueue this file to be flashed?[/]", false))
+                                queue.Add(cmds[2], entry3);
+
+                            session.EndSession();
+                            stop.Stop();
+                            AnsiConsole.MarkupLine($"[green]Time elapsed: {stop.Elapsed}[/]");
+                            break;
+                        case "queueflash":
+                            if (session == null) {
+                                AnsiConsole.MarkupLine("[red]No device connection was done yet![/]");
+                                break;
+                            }
+                            
+                            stop.Start();
+                            if (!session.SessionBegan) session.BeginSession();
+                            AnsiConsole.Progress()
+                                .Start(ctx => {
+                                    foreach (KeyValuePair<string, PitEntry> pair in queue) {
+                                        var task = ctx.AddTask($"[yellow]Flashing {pair.Value.PartitionName}[/]");
+                                        using var stream = new FileStream(pair.Key, FileMode.Open, FileAccess.Read);
+                                        session.FlashFile(stream, pair.Value, i => task.Increment(i));
+                                        task.Description = $"[green]Flashing {pair.Value.PartitionName}[/]";
+                                        task.StopTask();
+                                    }
+                                });
+                            session.EndSession();
+                            stop.Stop();
+                            AnsiConsole.MarkupLine($"[green]Time elapsed: {stop.Elapsed}[/]");
+                            break;
+                        case "clear":
+                            queue = new Dictionary<string, PitEntry>();
                             break;
                         case "init":
                             stop.Start();
@@ -292,9 +366,13 @@ namespace Hreidmar.Application
                             AnsiConsole.MarkupLine($"[bold]<something, something>[/] - Options (sub-commands)");
                             AnsiConsole.MarkupLine($"\n[bold]Commands:[/]");
                             AnsiConsole.MarkupLine($"[bold]readpit <filename> <table,file<filename>>[/] - Read PIT file");
-                            AnsiConsole.MarkupLine($"[bold]session <reboot, start, end, pitdump<filename>, " +
-                                                   $"tflash, flash<filename, partition>>, pitflash<filename>[/] - Session stuff");
-                            AnsiConsole.MarkupLine($"[bold]dispose[/] - Closes current connection");
+                            AnsiConsole.MarkupLine($"[bold]session <reboot, start, end>[/] - Session stuff");
+                            AnsiConsole.MarkupLine($"[bold]flash <filename, partition>[/] - Flash a file onto partition");
+                            AnsiConsole.MarkupLine($"[bold]pitflash <filename>[/] - Flash PIT onto device");
+                            AnsiConsole.MarkupLine($"[bold]pitdump <filename>[/] - Dump device's PIT");
+                            AnsiConsole.MarkupLine($"[bold]enqueue <filename, partition>[/] - Enqueue file flash onto partition");
+                            AnsiConsole.MarkupLine($"[bold]queueflash[/] - Flash files onto paritions in file flash queue");
+                            AnsiConsole.MarkupLine($"[bold]clear[/] - Clear file flash queue");
                             AnsiConsole.MarkupLine($"[bold]init (id)[/] - Initialize connection");
                             AnsiConsole.MarkupLine($"[bold]reboot[/] - Switches reboot option");
                             AnsiConsole.MarkupLine($"[bold]resume[/] - Switches resume option");
