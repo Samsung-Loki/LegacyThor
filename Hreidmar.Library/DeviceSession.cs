@@ -324,7 +324,9 @@ namespace Hreidmar.Library
             for (var i = 0; i < blocks; i++) {
                 var last = i + 1 == blocks;
                 SendPacket(new DumpPitPacket { Block = i }, 6000);
+                Array.Resize(ref tmpbuf, 500);
                 Read(ref tmpbuf, 6000, out var read);
+                Array.Resize(ref tmpbuf, read);
                 if (read != 500 && !last)
                     throw new Exception($"Read not enough bytes: {read}");
                 buf.AddRange(tmpbuf);

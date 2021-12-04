@@ -129,7 +129,7 @@ namespace Hreidmar.Application
                                     AnsiConsole.MarkupLine($"[green]Identifier:[/] {entry.Identifier}");
                                     AnsiConsole.MarkupLine($"[green]Flash name:[/] {entry.FlashName}");
                                     AnsiConsole.MarkupLine($"[green]Binary Type:[/] {entry.BinaryType}");
-                                    if (AnsiConsole.Confirm("[yellow]Do you really want to flash this file?[/]")) {
+                                    if (AnsiConsole.Confirm("[yellow]Do you really want to flash this file?[/]", false)) {
                                         AnsiConsole.Progress()
                                             .Start(ctx => {
                                                 using var stream = new FileStream(cmds[2], FileMode.Open, FileAccess.Read);
