@@ -103,6 +103,19 @@ namespace Hreidmar.Application
                                     stop.Stop();
                                     AnsiConsole.MarkupLine($"[green]Time elapsed: {stop.Elapsed}[/]");
                                     break;
+                                case "pitflash":
+                                    if (cmds.Length < 3) {
+                                        AnsiConsole.MarkupLine("[red]Filename required![/]");
+                                        break;
+                                    }
+                                    
+                                    stop.Start();
+                                    AnsiConsole.Markup("[yellow]This may render your device unbootable and hardbricked![/]");
+                                    if (AnsiConsole.Confirm("[yellow]Do you really want to do this?[/]", false))
+                                        session.FlashPit(File.ReadAllBytes(cmds[2]));
+                                    stop.Stop();
+                                    AnsiConsole.MarkupLine($"[green]Time elapsed: {stop.Elapsed}[/]");
+                                    break;
                                 case "flash":
                                     if (cmds.Length < 4) {
                                         AnsiConsole.MarkupLine("[red]Filename and partition name required![/]");
@@ -280,7 +293,7 @@ namespace Hreidmar.Application
                             AnsiConsole.MarkupLine($"\n[bold]Commands:[/]");
                             AnsiConsole.MarkupLine($"[bold]readpit <filename> <table,file<filename>>[/] - Read PIT file");
                             AnsiConsole.MarkupLine($"[bold]session <reboot, start, end, pitdump<filename>, " +
-                                                   $"tflash, flash<filename, partition>>[/] - Session stuff");
+                                                   $"tflash, flash<filename, partition>>, pitflash<filename>[/] - Session stuff");
                             AnsiConsole.MarkupLine($"[bold]dispose[/] - Closes current connection");
                             AnsiConsole.MarkupLine($"[bold]init (id)[/] - Initialize connection");
                             AnsiConsole.MarkupLine($"[bold]reboot[/] - Switches reboot option");
