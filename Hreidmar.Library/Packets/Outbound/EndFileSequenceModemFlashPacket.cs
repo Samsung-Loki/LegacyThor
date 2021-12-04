@@ -19,6 +19,7 @@ namespace Hreidmar.Library.Packets.Outbound
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryWriter(memory);
             stream.Write(0x66);                   // File type
+            stream.Write(0x03);                   // End flag
             stream.Write(0x01);                   // Modem flag
             stream.Write(Length);                 // Size
             stream.Write(0x00);                   // Unknown

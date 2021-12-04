@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -13,6 +14,8 @@ using LibUsbDotNet.Main;
 using LibUsbDotNet.WinUsb;
 using MonoLibUsb;
 using Spectre.Console;
+// ReSharper disable AccessToModifiedClosure
+// ReSharper disable AccessToDisposedClosure
 
 namespace Hreidmar.Application
 {
@@ -20,7 +23,6 @@ namespace Hreidmar.Application
     {
         public static void Main(string[] args) {
             AnsiConsole.MarkupLine("[green]Welcome to Hreidmar shell![/]");
-            AnsiConsole.MarkupLine("[yellow]Options will only apply before initialization![/]");
             DeviceSession session = null;
             var options = new DeviceSession.OptionsClass();
             while (true) {
@@ -76,13 +78,21 @@ namespace Hreidmar.Application
                                     AnsiConsole.MarkupLine($"[green]Time elapsed: {stop.Elapsed}[/]");
                                     break;
                                 case "pitdump":
-                                    stop.Start();
                                     if (cmds.Length < 3) {
                                         AnsiConsole.MarkupLine("[red]Filename required![/]");
                                         break;
                                     }
-
-                                    File.WriteAllBytes(cmds[2], session.DumpPit());
+                                    
+                                    stop.Start();
+                                    AnsiConsole.Progress()
+                                        .Start(ctx => {
+                                            using var stream = new FileStream(cmds[2], FileMode.Open, FileAccess.Read);
+                                            var task = ctx.AddTask($"[yellow]Dumping PIT[/]");
+                                            var pit = session.DumpPit(i => task.Increment(i));
+                                            File.WriteAllBytes(cmds[2], pit);
+                                            task.Description = "[green]Dumping PIT[/]";
+                                            task.StopTask();
+                                        });
                                     AnsiConsole.MarkupLine($"[green]Dump saved as {cmds[2]}![/]");
                                     stop.Stop();
                                     AnsiConsole.MarkupLine($"[green]Time elapsed: {stop.Elapsed}[/]");
@@ -90,6 +100,48 @@ namespace Hreidmar.Application
                                 case "tflash":
                                     stop.Start();
                                     session.EnableTFlash();
+                                    stop.Stop();
+                                    AnsiConsole.MarkupLine($"[green]Time elapsed: {stop.Elapsed}[/]");
+                                    break;
+                                case "flash":
+                                    if (cmds.Length < 4) {
+                                        AnsiConsole.MarkupLine("[red]Filename and partition name required![/]");
+                                        break;
+                                    }
+                                    
+                                    stop.Start();
+                                    if (!session.SessionBegan) session.BeginSession();
+                                    PitData pit = null;
+                                    AnsiConsole.Progress()
+                                        .Start(ctx => {
+                                            using var stream = new FileStream(cmds[2], FileMode.Open, FileAccess.Read);
+                                            var task = ctx.AddTask($"[yellow]Dumping PIT[/]");
+                                            pit = PitData.FromBytes(session.DumpPit(i => task.Increment(i)));
+                                            task.Description = "[green]Dumping PIT[/]";
+                                            task.StopTask();
+                                        });
+                                    var entry = pit.Entries.FirstOrDefault(x => x.PartitionName == cmds[3]);
+                                    if (entry == null) {
+                                        AnsiConsole.MarkupLine("[red]Partition does not exist![/]");
+                                        break;
+                                    }
+                                    
+                                    AnsiConsole.MarkupLine($"[green]Identifier:[/] {entry.Identifier}");
+                                    AnsiConsole.MarkupLine($"[green]Flash name:[/] {entry.FlashName}");
+                                    AnsiConsole.MarkupLine($"[green]Binary Type:[/] {entry.BinaryType}");
+                                    if (AnsiConsole.Confirm("[yellow]Do you really want to flash this file?[/]")) {
+                                        AnsiConsole.Progress()
+                                            .Start(ctx => {
+                                                using var stream = new FileStream(cmds[2], FileMode.Open, FileAccess.Read);
+                                                var task = ctx.AddTask($"[yellow]Flashing {entry.PartitionName}[/]");
+                                                session.ReportTotalBytes(new List<ulong> { (ulong)stream.Length });
+                                                session.FlashFile(stream, entry, i => task.Increment(i));
+                                                task.Description = $"[green]Flashing {entry.PartitionName}[/]";
+                                                task.StopTask();
+                                            });
+                                    }
+
+                                    session.EndSession();
                                     stop.Stop();
                                     AnsiConsole.MarkupLine($"[green]Time elapsed: {stop.Elapsed}[/]");
                                     break;
@@ -102,13 +154,15 @@ namespace Hreidmar.Application
                             AnsiConsole.MarkupLine(options.Reboot 
                                 ? "[green]Reboot option disabled![/]"
                                 : "[green]Reboot option enabled![/]");
-                            options.Reboot = !options.Reboot;
+                            if (session != null) session.Options.Reboot = !session.Options.Reboot;
+                            else options.Reboot = !options.Reboot;
                             break;
                         case "resume":
                             AnsiConsole.MarkupLine(options.Resume 
                                 ? "[green]Resume option disabled![/]"
                                 : "[green]Resume option enabled![/]");
-                            options.Resume = !options.Resume;
+                            if (session != null) session.Options.Resume = !session.Options.Resume;
+                            else options.Resume = !options.Resume;
                             break;
                         case "init":
                             stop.Start();
@@ -225,7 +279,8 @@ namespace Hreidmar.Application
                             AnsiConsole.MarkupLine($"[bold]<something, something>[/] - Options (sub-commands)");
                             AnsiConsole.MarkupLine($"\n[bold]Commands:[/]");
                             AnsiConsole.MarkupLine($"[bold]readpit <filename> <table,file<filename>>[/] - Read PIT file");
-                            AnsiConsole.MarkupLine($"[bold]session <reboot, start, end, pitdump, tflash>[/] - Session stuff");
+                            AnsiConsole.MarkupLine($"[bold]session <reboot, start, end, pitdump<filename>, " +
+                                                   $"tflash, flash<filename, partition>>[/] - Session stuff");
                             AnsiConsole.MarkupLine($"[bold]dispose[/] - Closes current connection");
                             AnsiConsole.MarkupLine($"[bold]init (id)[/] - Initialize connection");
                             AnsiConsole.MarkupLine($"[bold]reboot[/] - Switches reboot option");

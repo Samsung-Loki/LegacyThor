@@ -47,6 +47,8 @@ namespace Hreidmar.Library
         private UsbDevice _device;
         private int _error;
 
+        public DeviceSession(bool ok) { }
+        
         /// <summary>
         /// Find a samsung device and initialize it
         /// </summary>
@@ -160,7 +162,7 @@ namespace Hreidmar.Library
                 SendPacket(new HandshakePacket(), 6000);
                 var packet = (IInboundPacket) new HandshakeResponse();
                 ReadPacket(ref packet, 6000);
-            }
+            } else SessionBegan = true;
         }
 
         /// <summary>
@@ -306,8 +308,9 @@ namespace Hreidmar.Library
         /// <summary>
         /// Dump device's PIT
         /// </summary>
+        /// <param name="progress">Report progress</param>
         /// <returns>PIT data buffer</returns>
-        public byte[] DumpPit()
+        public byte[] DumpPit(Action<int> progress)
         {
             if (!SessionBegan) BeginSession();
             SendPacket(new BeginPitDumpPacket(), 6000);
@@ -318,20 +321,15 @@ namespace Hreidmar.Library
             var buf = new List<byte>();
             var blocks = (int)Math.Ceiling((decimal)size / 500);
             var tmpbuf = new byte[500];
-            AnsiConsole.Progress().Start(ctx => {
-                var task = ctx.AddTask("[yellow]Dumping PIT[/]", maxValue: size);
-                for (var i = 0; i < blocks; i++) {
-                    var last = i + 1 == blocks;
-                    SendPacket(new DumpPitPacket { Block = i }, 6000);
-                    Read(ref tmpbuf, 6000, out var read);
-                    if (read != 500 && !last)
-                        throw new Exception($"Read not enough bytes: {read}");
-                    buf.AddRange(tmpbuf);
-                    task.Increment(read);
-                }
-                task.StopTask();
-                task.Description = "[green]Dumping PIT[/]";
-            });
+            for (var i = 0; i < blocks; i++) {
+                var last = i + 1 == blocks;
+                SendPacket(new DumpPitPacket { Block = i }, 6000);
+                Read(ref tmpbuf, 6000, out var read);
+                if (read != 500 && !last)
+                    throw new Exception($"Read not enough bytes: {read}");
+                buf.AddRange(tmpbuf);
+                progress(read);
+            }
             SendPacket(new EndPitPacket(), 6000);
             packet = new PitResponse();
             ReadPacket(ref packet, 6000);
@@ -342,10 +340,15 @@ namespace Hreidmar.Library
         /// Report total byte size
         /// </summary>
         /// <param name="length">Total byte size</param>
-        public void ReportTotalBytes(ulong length)
+        public void ReportTotalBytes(IEnumerable<ulong> length)
         {
             if (!SessionBegan) BeginSession();
-            SendPacket(new TotalBytesPacket { Length = length }, 6000);
+            // Doing this fixes invalid percentage drawing.
+            // For no reason it adds entire packet's size,
+            // even if it's bigger that size reported. 
+            var total = length.Aggregate<ulong, ulong>(0, (current, i)
+                => current + (ulong)Math.Ceiling((double)i / _transferPacketSize) * (ulong)_transferPacketSize);
+            SendPacket(new TotalBytesPacket { Length = total }, 6000);
             var packet = (IInboundPacket) new SessionSetupResponse();
             ReadPacket(ref packet, 6000);
             var entire = (SessionSetupResponse) packet;
@@ -406,25 +409,69 @@ namespace Hreidmar.Library
         /// <summary>
         /// Flash a file
         /// </summary>
+        /// <param name="progress">Report progress</param>
         /// <param name="stream">File stream</param>
         /// <param name="entry">PIT entry</param>
-        public void FlashFile(FileStream stream, PitEntry entry)
+        public void FlashFile(FileStream stream, PitEntry entry, Action<int> progress)
         {
             AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Flashing {entry.PartitionName}...");
             stream.Seek(0, SeekOrigin.Begin); // Failsafe
             SendPacket(new BeginFileFlashPacket(), 6000);
             var packet = (IInboundPacket) new FileResponse();
             ReadPacket(ref packet, 6000);
-
+            
             var sequence = _packetsPerSequence * _transferPacketSize;
             // ReSharper disable once PossibleLossOfFraction
-            var count = (int)Math.Ceiling((double)(stream.Length / sequence));
-            for (var i = 0; i <= count; i++)
-            {
+            var count = (int)Math.Ceiling((double)stream.Length / sequence);
+            for (var i = 0; i < count; i++) {
                 long read = i * sequence;
                 long left = stream.Length - read;
-                var size = Math.Min(_packetsPerSequence, left / _packetsPerSequence);
+                var fileParts = (int)Math.Min(_packetsPerSequence, Math.Ceiling((double)left / _transferPacketSize));
+                var size = (int)Math.Min(sequence, left);
+                SendPacket(new BeginFileSequenceFlashPacket { Length = size }, 6000);
+                packet = new FileResponse();
+                ReadPacket(ref packet, 6000);
+                for (int j = 0; j < fileParts; j++) {
+                    var read2 = j * _transferPacketSize;
+                    var left2 = size - read2;
+                    var size2 = Math.Min(_transferPacketSize, left2);
+                    var buf = new byte[_transferPacketSize];
+                    stream.Read(buf, 0, size2);
+                    Write(buf, 6000, out var wrote);
+                    if (wrote != buf.Length)
+                        throw new Exception($"Buffer size {buf.Length}, sent {wrote}");
+                    packet = new FilePartResponse();
+                    ReadPacket(ref packet, 6000);
+                    var actual = (FilePartResponse) packet;
+                    if (actual.Index != j)
+                        throw new Exception($"Actual index {j}, received index {actual.Index}");
+                    progress(wrote);
+                }
+
+                switch (entry.BinaryType) {
+                    case PitEntry.BinaryTypeEnum.AP:
+                        SendPacket(new EndFileSequencePhoneFlashPacket {
+                            DeviceType = entry.DeviceType, 
+                            Identifier = entry.Identifier,
+                            IsLastSequence = i + 1 == count,
+                            Length = size
+                        }, 6000);
+                        break;
+                    case PitEntry.BinaryTypeEnum.CP:
+                        SendPacket(new EndFileSequenceModemFlashPacket {
+                            DeviceType = entry.DeviceType,
+                            IsLastSequence = i + 1 == count,
+                            Length = size
+                        }, 6000);
+                        break;
+                    default:
+                        throw new Exception($"Invalid BinaryType: {(int)entry.BinaryType}");
+                }
+                
+                packet = new FileResponse();
+                ReadPacket(ref packet, 6000);
             }
+            AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Done!");
         }
 
         /// <summary>

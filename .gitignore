@@ -3,6 +3,7 @@
 *.tar*
 *.log
 *.packet
+*.bin
 bin/
 obj/
 /packages/
