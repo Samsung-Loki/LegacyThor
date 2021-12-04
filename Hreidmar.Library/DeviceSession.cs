@@ -412,9 +412,9 @@ namespace Hreidmar.Library
         /// Flash a file
         /// </summary>
         /// <param name="progress">Report progress</param>
-        /// <param name="stream">File stream</param>
+        /// <param name="stream">Stream</param>
         /// <param name="entry">PIT entry</param>
-        public void FlashFile(FileStream stream, PitEntry entry, Action<int> progress)
+        public void FlashFile(Stream stream, PitEntry entry, Action<int> progress)
         {
             AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Flashing {entry.PartitionName}...");
             stream.Seek(0, SeekOrigin.Begin); // Failsafe
@@ -438,7 +438,9 @@ namespace Hreidmar.Library
                     var left2 = size - read2;
                     var size2 = Math.Min(_transferPacketSize, left2);
                     var buf = new byte[_transferPacketSize];
-                    stream.Read(buf, 0, size2);
+                    var bytes = stream.Read(buf, 0, size2);
+                    while (bytes != size2) // Workaround if data is not available yet
+                        bytes += stream.Read(buf, 0, size2 - bytes);
                     Write(buf, 6000, out var wrote);
                     if (wrote != buf.Length)
                         throw new Exception($"Buffer size {buf.Length}, sent {wrote}");

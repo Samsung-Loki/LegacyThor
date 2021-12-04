@@ -4,15 +4,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Hreidmar.Library;
-using Hreidmar.Library.Packets;
 using Hreidmar.Library.Packets.Inbound;
 using Hreidmar.Library.Packets.Playground;
 using Hreidmar.Library.PIT;
+using K4os.Compression.LZ4.Streams;
 using LibUsbDotNet;
-using LibUsbDotNet.LudnMonoLibUsb;
-using LibUsbDotNet.Main;
-using LibUsbDotNet.WinUsb;
-using MonoLibUsb;
 using Spectre.Console;
 // ReSharper disable AccessToModifiedClosure
 // ReSharper disable AccessToDisposedClosure
@@ -182,10 +178,26 @@ namespace Hreidmar.Application
                                     .Start(ctx => {
                                         using var stream = new FileStream(cmds[2], FileMode.Open, FileAccess.Read);
                                         var task = ctx.AddTask($"[yellow]Flashing {entry2.PartitionName}[/]");
-                                        session.ReportTotalBytes(new List<ulong> { (ulong)stream.Length });
-                                        session.FlashFile(stream, entry2, i => task.Increment(i));
-                                        task.Description = $"[green]Flashing {entry2.PartitionName}[/]";
-                                        task.StopTask();
+                                        if (cmds[2].EndsWith("lz4")) {
+                                            AnsiConsole.MarkupLine($"[green]File is compressed using LZ4 algorithm.[/]");
+                                            AnsiConsole.MarkupLine($"[green]We'll decompress it and flash it as we get more decompressed data.[/]");
+                                            using var decompress = LZ4Stream.Decode(stream);
+                                            if (decompress.Length == -1) {
+                                                AnsiConsole.MarkupLine("[red]Unable to perform real-time decompression![/]");
+                                                AnsiConsole.MarkupLine("[red]Output data size is unknown.[/]");
+                                                session.EndSession();
+                                                return;
+                                            }
+                                            session.ReportTotalBytes(new List<ulong> { (ulong)decompress.Length });
+                                            session.FlashFile(decompress, entry2, i => task.Increment(i));
+                                            task.Description = $"[green]Flashing {entry2.PartitionName}[/]";
+                                            task.StopTask();
+                                        } else {
+                                            session.ReportTotalBytes(new List<ulong> { (ulong)stream.Length });
+                                            session.FlashFile(stream, entry2, i => task.Increment(i));
+                                            task.Description = $"[green]Flashing {entry2.PartitionName}[/]";
+                                            task.StopTask();
+                                        }
                                     });
                             }
 
@@ -239,6 +251,26 @@ namespace Hreidmar.Application
                                     foreach (KeyValuePair<string, PitEntry> pair in queue) {
                                         var task = ctx.AddTask($"[yellow]Flashing {pair.Value.PartitionName}[/]");
                                         using var stream = new FileStream(pair.Key, FileMode.Open, FileAccess.Read);
+                                        if (pair.Key.EndsWith("lz4")) {
+                                            AnsiConsole.MarkupLine($"[green]File is compressed using LZ4 algorithm.[/]");
+                                            AnsiConsole.MarkupLine($"[green]We'll decompress it and flash it as we get more decompressed data.[/]");
+                                            using var decompress = LZ4Stream.Decode(stream);
+                                            if (decompress.Length == -1) {
+                                                AnsiConsole.MarkupLine("[red]Unable to perform real-time decompression![/]");
+                                                AnsiConsole.MarkupLine("[red]Output data size is unknown.[/]");
+                                                AnsiConsole.MarkupLine("[red]This file will be skipped.[/]");
+                                                continue;
+                                            }
+                                            session.ReportTotalBytes(new List<ulong> { (ulong)decompress.Length });
+                                            session.FlashFile(decompress, pair.Value, i => task.Increment(i));
+                                            task.Description = $"[green]Flashing {pair.Value.PartitionName}[/]";
+                                            task.StopTask();
+                                        } else {
+                                            session.ReportTotalBytes(new List<ulong> { (ulong)stream.Length });
+                                            session.FlashFile(stream, pair.Value, i => task.Increment(i));
+                                            task.Description = $"[green]Flashing {pair.Value.PartitionName}[/]";
+                                            task.StopTask();
+                                        }
                                         session.FlashFile(stream, pair.Value, i => task.Increment(i));
                                         task.Description = $"[green]Flashing {pair.Value.PartitionName}[/]";
                                         task.StopTask();
