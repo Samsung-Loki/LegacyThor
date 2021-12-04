@@ -7,6 +7,8 @@ namespace Hreidmar.Library.Packets.Outbound
     /// </summary>
     public class SessionSetupPacket : IOutboundPacket
     {
+        public DeviceSession.Protocol protocol;
+
         public byte[] Pack()
         {
             var buf = new byte[1024];
@@ -14,8 +16,19 @@ namespace Hreidmar.Library.Packets.Outbound
             using var stream = new BinaryWriter(memory);
             stream.Write(0x64); // Session control type
             stream.Write(0);    // Begin session
-            stream.Write(0x4);  // Protocol v4
-            //TODO: Add ability to change protocol version
+
+            switch(protocol)
+            {
+                case DeviceSession.Protocol.ODIN_PROTOCOL_V3:
+                    stream.Write(0x3); // Protocol v3
+                    break;
+                case DeviceSession.Protocol.ODIN_PROTOCOL_V4:
+                    stream.Write(0x4); // Protocol v4
+                    break;
+                default:
+                    throw new System.Exception(string.Format("Invalid Protocol Version: {0}.", protocol.ToString()));
+            }
+
             return memory.ToArray();
         }
         

@@ -415,6 +415,45 @@ namespace Hreidmar.Application
                         case "exit":
                             Environment.Exit(0);
                             break;
+                        case "protocol":
+
+                            if(cmds.Length < 2)
+                            {
+                                AnsiConsole.MarkupLine($"Invalid Arugments, type: [bold]protocol help[/] to find out all the avaible commands.");
+                                break;
+                            }
+
+                            var text = cmds[1];
+
+                            switch(text)
+                            {
+                                case "help":
+                                    AnsiConsole.MarkupLine($"[bold]Protocol Help:[/]");
+                                    AnsiConsole.MarkupLine($"[bold]\nCommands:[/]");
+                                    AnsiConsole.MarkupLine($"[bold]protocol set <V3/V4> - Sets the protocol to be used.[/]");
+                                    AnsiConsole.MarkupLine($"[bold]protocol get - Tells which protocol is currently being used.[/]");
+                                    break;
+                                case "set":
+                                    var protocol = cmds[2];
+                                    switch(protocol.ToLower())
+                                    {
+                                        case "v3":
+                                            options.protocol = DeviceSession.Protocol.ODIN_PROTOCOL_V3;
+                                            break;
+                                        case "v4":
+                                            options.protocol = DeviceSession.Protocol.ODIN_PROTOCOL_V4;
+                                            break;
+                                    }
+                                    AnsiConsole.MarkupLine($"[bold]Set Protocol to {options.protocol.ToString()} sucessfully![/]");
+                                    break;
+                                case "get":
+                                    AnsiConsole.MarkupLine($"[bold]Protocol is currently set to {options.protocol.ToString()}.[/]");
+                                    break;
+                                default:
+                                    AnsiConsole.MarkupLine($"Invalid Arugments, type: [bold]protocol help[/] to find out all the avaible commands.");
+                                    break;
+                            }
+                            break;
                         default:
                             AnsiConsole.MarkupLine($"[red]Unknown command![/]");
                             break;

@@ -23,10 +23,18 @@ namespace Hreidmar.Library
     /// </summary>
     public class DeviceSession : IDisposable
     {
+        public enum Protocol
+        {
+            ODIN_PROTOCOL_UNKNOWN = -1,
+            ODIN_PROTOCOL_V3,
+            ODIN_PROTOCOL_V4
+        };
+
         public class OptionsClass
         {
             public bool Reboot = false;
             public bool Resume = false;
+            public Protocol protocol = Protocol.ODIN_PROTOCOL_V4; //default
         }
         
         public static readonly int SamsungKVid = 0x04E8;
@@ -254,7 +262,9 @@ namespace Hreidmar.Library
             if (SessionBegan)
                 throw new Exception("Session already began!");
             AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Beginning session...");
-            SendPacket(new SessionSetupPacket(), 6000);
+            var session = new SessionSetupPacket();
+            session.protocol = Options.protocol;
+            SendPacket(session, 6000);
             var packet = (IInboundPacket) new SessionSetupResponse();
             ReadPacket(ref packet, 6000);
             var actualPacket = (SessionSetupResponse)packet;
