@@ -23,50 +23,95 @@ namespace Hreidmar.Library
     /// </summary>
     public class DeviceSession : IDisposable
     {
+        /// <summary>
+        /// Settings for the DeviceSession
+        /// </summary>
         public class OptionsClass
         {
-            public bool Reboot = false;
-            public bool Resume = false;
+            /// <summary>
+            /// Automatically reboot after session ends.
+            /// </summary>
+            public bool AutoReboot = false;
+            
+            /// <summary>
+            /// Automatically perform handshake after initialization.
+            /// </summary>
+            public bool AutoHandshake = true;
+
+            /// <summary>
+            /// Makes DeviceSession think, that handshake was already done.
+            /// Use this only if you closed Hreidmar and your decice was not replugged in.
+            /// </summary>
+            public bool ResumeUsbConnection = false;
+
+            /// <summary>
+            /// Makes DeviceSession think, that session already began.
+            /// Use this only if you lost your USB connection to your device when a session was active. 
+            /// </summary>
+            public bool ResumeSession = false;
+            
+            /// <summary>
+            /// Use this only if you want to enable T-Flash.
+            /// You can't disable it until you reboot your device.
+            /// </summary>
+            public bool EnableTFlash = false;
+
+            /// <summary>
+            /// Protocol version. V4 is recommended.
+            /// You can't change it until you end current session.
+            /// </summary>
+            public ProtocolVersion Protocol = ProtocolVersion.Version4;
         }
         
+        // Samsung device detection
         public static readonly int SamsungKVid = 0x04E8;
         public static readonly int[] SamsungPids = { 0x6601, 0x685D, 0x68C3 };
+        // LibUsb stuff
         private readonly MonoUsbSessionHandle _sessionHandle = new();
         private readonly MonoUsbDeviceHandle _deviceHandle;
+        // USB connection stuff
         private int _alternateId = 0xFF;
         private int _interfaceId = 0xFF;
         private byte _readEndpoint = 0xFF;
         private byte _writeEndpoint = 0xFF;
+        private UsbEndpointWriter _writer;
+        private UsbEndpointReader _reader;
+        private UsbDevice _device;
+        private int _error;
+        // File flashing stuff
         private int _packetsPerSequence = 800;
         private int _transferPacketSize = 131072;
         private int _transferTimeout = 30000;
-        public bool SessionBegan = false; 
-        private UsbEndpointWriter _writer;
-        private UsbEndpointReader _reader;
-        public OptionsClass Options;
-        private UsbDevice _device;
-        private int _error;
+        // Session
+        private bool _sessionBegan = false;
+        private bool _hanshakeDone = false;
+        private bool _tFlashEnabled = false;
+        // Options
+        private OptionsClass _options;
+        public Action<string> LogFunction;
 
         public DeviceSession(bool ok) { }
-        
+
         /// <summary>
         /// Find a samsung device and initialize it
         /// </summary>
         /// <param name="options">Options</param>
+        /// <param name="log">Logging</param>
         /// <exception cref="DeviceNotFoundException">No device was found</exception>
-        public DeviceSession(OptionsClass options)
+        public DeviceSession(OptionsClass options, Action<string> log)
         {
-            Options = options;
+            LogFunction = log;
+            _options = options;
 
             UsbRegistry found = null;
             foreach (UsbRegistry device in UsbDevice.AllDevices) {
                 if (device.Vid != SamsungKVid || !SamsungPids.Contains(device.Pid)) continue;
-                AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Found device: {device.Vid}/{device.Pid}");
+                LogFunction($"Found device: {device.Vid}/{device.Pid}");
                 found = device;
             }
             
             if (found == null) throw new DeviceNotFoundException("No Samsung devices were found!");
-            AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Selected device: {found.Vid}/{found.Pid}");
+            LogFunction($"Selected device: {found.Vid}/{found.Pid}");
             if (UsbDevice.LastErrorString.Contains("Access denied", StringComparison.CurrentCultureIgnoreCase))
                 throw new Exception("Access denied!");
             try {
@@ -82,9 +127,11 @@ namespace Hreidmar.Library
         /// </summary>
         /// <param name="device">USB device</param>
         /// <param name="options">Options</param>
-        public DeviceSession(UsbDevice device, OptionsClass options)
+        /// <param name="log">Logging</param>
+        public DeviceSession(UsbDevice device, OptionsClass options, Action<string> log)
         {
-            Options = options;
+            LogFunction = log;
+            _options = options;
             
             if (UsbDevice.LastErrorString.Contains("Access denied", StringComparison.CurrentCultureIgnoreCase))
                 throw new Exception("Access denied!");
@@ -97,31 +144,50 @@ namespace Hreidmar.Library
         }
 
         /// <summary>
+        /// Apply new options
+        /// </summary>
+        public void ApplyChanges(OptionsClass options)
+        {
+            if (_tFlashEnabled && options.EnableTFlash)
+                throw new Exception("You can't disable TFlash until a reboot!");
+            if (_sessionBegan && options.ResumeSession)
+                throw new Exception("Session already began, you can't resume it!");
+            if (_hanshakeDone && options.ResumeUsbConnection)
+                throw new Exception("Handshake was already done, you can't resume it!");
+            if (_options.AutoHandshake && !options.AutoHandshake)
+                throw new Exception("Auto-handshake can't be disabled after it was already done!");
+            if (!_options.AutoHandshake && options.AutoHandshake)
+                throw new Exception("Auto-handshake can't be enabled after initialization was done!");
+            if (options.Protocol != _options.Protocol && !_sessionBegan)
+                throw new Exception("Protocol can't be changed while you have an active session!");
+            _options = options;
+        }
+
+        /// <summary>
         /// Initialize connection and required stuff
         /// </summary>
         private void Initialize()
         {
             void CheckForErrors() {
-                if (_error != 0) {
-                    var error = _error;
-                    Dispose();
-                    throw new Exception($"[Initialize/CheckForErrors] {error}");
-                }
+                if (_error == 0) return;
+                var error = _error;
+                Dispose();
+                throw new Exception($"{error}");
             }
             
-            AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Driver mode: {_device.DriverMode}");
-            AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Product: {_device.Info.ProductString}");
+            LogFunction($"Driver mode: {_device.DriverMode}");
+            LogFunction($"Product: {_device.Info.ProductString}");
             bool found = false;
-            AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Interfaces total: {_device.Configs[0].InterfaceInfoList.Count}!");
+            LogFunction($"Interfaces total: {_device.Configs[0].InterfaceInfoList.Count}!");
             foreach (UsbInterfaceInfo interfaceInfo in _device.Configs[0].InterfaceInfoList) {
                 byte possibleReadEndpoint = 0xFF;
                 byte possibleWriteEndpoint = 0xFF;
                 _interfaceId = interfaceInfo.Descriptor.InterfaceID;
                 _alternateId = interfaceInfo.Descriptor.AlternateID;
-                AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Interface 0x{_interfaceId:X2}/0x{_alternateId:X2}: {interfaceInfo.EndpointInfoList.Count}/{interfaceInfo.Descriptor.Class}");
+                LogFunction($"Interface 0x{_interfaceId:X2}/0x{_alternateId:X2}: {interfaceInfo.EndpointInfoList.Count}/{interfaceInfo.Descriptor.Class}");
                 if (interfaceInfo.EndpointInfoList.Count != 2) continue;
                 if (interfaceInfo.Descriptor.Class != ClassCodeType.Data) continue;
-                AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Interface is valid!");
+                LogFunction($"Interface is valid!");
                 foreach (var endpoint in interfaceInfo.EndpointInfoList) {
                     var id = endpoint.Descriptor.EndpointID;
                     if (id is >= 0x81 and <= 0x8F)
@@ -129,12 +195,12 @@ namespace Hreidmar.Library
                     else if (id is >= 0x01 and <= 0x0F)
                         possibleWriteEndpoint = id;
                     else throw new DeviceConnectionFailedException($"Invalid EndpointID!");
-                    AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Endpoint 0x{id:X2}: {endpoint.Descriptor.MaxPacketSize}/{endpoint.Descriptor.Interval}/{endpoint.Descriptor.Refresh}");
+                    LogFunction($"Endpoint 0x{id:X2}: {endpoint.Descriptor.MaxPacketSize}/{endpoint.Descriptor.Interval}/{endpoint.Descriptor.Refresh}");
                 }
 
                 if (possibleReadEndpoint == 0xFF || possibleWriteEndpoint == 0xFF) continue;
                 found = true;
-                AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Endpoints are valid!");
+                LogFunction($"Endpoints are valid!");
                 _readEndpoint = possibleReadEndpoint;
                 _writeEndpoint = possibleWriteEndpoint;
             }
@@ -147,7 +213,7 @@ namespace Hreidmar.Library
                 _error = MonoUsbApi.SetInterfaceAltSetting(_deviceHandle, _interfaceId, _alternateId); CheckForErrors();
                 if (MonoUsbApi.KernelDriverActive(_deviceHandle, _interfaceId) == 1) {
                     _error = MonoUsbApi.DetachKernelDriver(_deviceHandle, _interfaceId); CheckForErrors();
-                    AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Detached kernel driver!");
+                    LogFunction($"Detached kernel driver!");
                 }
             
                 _error = MonoUsbApi.ResetDevice(_deviceHandle); CheckForErrors();
@@ -155,14 +221,21 @@ namespace Hreidmar.Library
 
             _writer = _device.OpenEndpointWriter((WriteEndpointID) _writeEndpoint);
             _reader = _device.OpenEndpointReader((ReadEndpointID) _readEndpoint);
+            if (_options.AutoHandshake && !_options.ResumeUsbConnection) Handshake();
+            if (_options.EnableTFlash) EnableTFlash();
+            _sessionBegan = _options.ResumeSession;
+            _hanshakeDone = _options.ResumeUsbConnection;
+        }
 
-            // Handshake
-            if (!Options.Resume) {
-                AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Doing handshake...");
-                SendPacket(new HandshakePacket(), 6000);
-                var packet = (IInboundPacket) new HandshakeResponse();
-                ReadPacket(ref packet, 6000);
-            } else SessionBegan = true;
+        /// <summary>
+        /// Perform a handshake (protocol initialization)
+        /// </summary>
+        public void Handshake()
+        {
+             LogFunction($"Doing handshake...");
+             SendPacket(new HandshakePacket(), 6000);
+             var packet = (IInboundPacket) new HandshakeResponse();
+             ReadPacket(ref packet, 6000);
         }
 
         /// <summary>
@@ -178,7 +251,7 @@ namespace Hreidmar.Library
             if (sendEmptyBefore) {
                 var code = _writer.Write(Array.Empty<byte>(), 100, out _);
                 if (code != ErrorCode.Ok)
-                    AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Unable to send an empty packet before: {code}");
+                    LogFunction($"Unable to send an empty packet before: {code}");
             }
             var code1 = _writer.Write(data, timeout, out wrote);
             if (code1 != ErrorCode.Ok)
@@ -186,7 +259,7 @@ namespace Hreidmar.Library
             if (sendEmptyAfter) {
                 var code = _writer.Write(Array.Empty<byte>(), 100, out _);
                 if (code != ErrorCode.Ok)
-                    AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Unable to send an empty packet after: {code}");
+                    LogFunction($"Unable to send an empty packet after: {code}");
             }
         }
 
@@ -203,7 +276,7 @@ namespace Hreidmar.Library
             if (sendEmptyBefore) {
                 var code = _reader.Read(Array.Empty<byte>(), 100, out _);
                 if (code != ErrorCode.Ok)
-                    AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Unable to read an empty packet before: {code}");
+                    LogFunction($"Unable to read an empty packet before: {code}");
             }
             var code1 = _reader.Read(data, timeout, out read);
             if (code1 != ErrorCode.Ok)
@@ -211,7 +284,7 @@ namespace Hreidmar.Library
             if (sendEmptyAfter) {
                 var code = _reader.Read(Array.Empty<byte>(), 100, out _);
                 if (code != ErrorCode.Ok)
-                    AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Unable to read an empty packet after: {code}");
+                    LogFunction($"Unable to read an empty packet after: {code}");
             }
         }
 
@@ -251,15 +324,15 @@ namespace Hreidmar.Library
         /// <exception cref="Exception">Error occured</exception>
         public void BeginSession()
         {
-            if (SessionBegan)
+            if (_sessionBegan)
                 throw new Exception("Session already began!");
-            AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Beginning session...");
-            SendPacket(new SessionSetupPacket(), 6000);
+            LogFunction("Beginning session...");
+            SendPacket(new SessionSetupPacket { Version = _options.Protocol }, 6000);
             var packet = (IInboundPacket) new SessionSetupResponse();
             ReadPacket(ref packet, 6000);
             var actualPacket = (SessionSetupResponse)packet;
             if (actualPacket.Flags != 0) {
-                AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Changing packet size is not supported!");
+                LogFunction("Changing packet size is not supported!");
                 _transferTimeout = 120000;     // Two minutes...
                 _transferPacketSize = 1048576; // 1 MiB
                 _packetsPerSequence = 30;      // 30 MB per sequence
@@ -268,41 +341,30 @@ namespace Hreidmar.Library
                 actualPacket = (SessionSetupResponse)packet;
                 if (actualPacket.Flags != 0)
                     throw new Exception($"Received {actualPacket.Flags} instead of 0.");
-                AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Successfully changed packet size!");
+                LogFunction("Successfully changed packet size!");
             }
             
-            AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Session began!");
-            SessionBegan = true;
+            LogFunction("Session began!");
+            _sessionBegan = true;
         }
 
-        /// <summary>
-        /// Get device's type
-        /// </summary>
-        /// <returns>Device type</returns>
-        public PitEntry.DeviceTypeEnum GetDeviceType()
-        {
-            if (!SessionBegan) BeginSession();
-            SendPacket(new DeviceTypePacket(), 6000);
-            var packet = (IInboundPacket) new DeviceTypeResponse();
-            ReadPacket(ref packet, 6000);
-            var actual = (DeviceTypeResponse) packet;
-            return actual.DeviceType;
-        }
-        
         /// <summary>
         /// Enable T-Flash
         /// </summary>
         public void EnableTFlash()
         {
-            if (!SessionBegan) BeginSession();
-            AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Enabling T-Flash...");
+            if (_tFlashEnabled)
+                throw new Exception("TFlash cannot be disabled!");
+            if (!_sessionBegan) BeginSession();
+            LogFunction("Enabling T-Flash...");
             SendPacket(new EnableTFlashPacket(), 6000);
             var packet = (IInboundPacket) new SessionSetupResponse();
             ReadPacket(ref packet, 6000);
             var entire = (SessionSetupResponse) packet;
             if (entire.Flags != 0)
                 throw new Exception($"Invalid response: {entire.Flags}");
-            AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] T-Flash enabled!");
+            LogFunction("T-Flash enabled!");
+            EndSession();
         }
 
         /// <summary>
@@ -312,7 +374,7 @@ namespace Hreidmar.Library
         /// <returns>PIT data buffer</returns>
         public byte[] DumpPit(Action<int> progress)
         {
-            if (!SessionBegan) BeginSession();
+            if (!_sessionBegan) BeginSession();
             SendPacket(new BeginPitDumpPacket(), 6000);
             var packet = (IInboundPacket) new BeginPitDumpResponse();
             ReadPacket(ref packet, 6000);
@@ -344,7 +406,7 @@ namespace Hreidmar.Library
         /// <param name="length">Total byte size</param>
         public void ReportTotalBytes(IEnumerable<ulong> length)
         {
-            if (!SessionBegan) BeginSession();
+            if (!_sessionBegan) BeginSession();
             // Doing this fixes invalid percentage drawing.
             // For no reason it adds entire packet's size,
             // even if it's bigger that size reported. 
@@ -363,11 +425,11 @@ namespace Hreidmar.Library
         /// </summary>
         public void Reboot()
         {
-            AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Rebooting...");
+            LogFunction("Rebooting...");
             SendPacket(new RebootDevicePacket(), 6000);
             var packet = (IInboundPacket) new EndSessionResponse();
             ReadPacket(ref packet, 6000);
-            AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Device rebooted!");
+            LogFunction("Device rebooted!");
         }
 
         /// <summary>
@@ -375,16 +437,16 @@ namespace Hreidmar.Library
         /// </summary>
         public void EndSession()
         {
-            if (!SessionBegan) 
+            if (!_sessionBegan) 
                 throw new Exception("Session has not started yet!");
-            AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Ending session...");
+            LogFunction("Ending session...");
             SendPacket(new EndSessionPacket(), 6000);
             var packet = (IInboundPacket) new EndSessionResponse();
             ReadPacket(ref packet, 6000);
 
-            if (Options.Reboot) Reboot();
-            AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Session ended!");
-            SessionBegan = false;
+            if (_options.AutoReboot) Reboot();
+            LogFunction("Session ended!");
+            _sessionBegan = false;
         }
 
         /// <summary>
@@ -393,7 +455,7 @@ namespace Hreidmar.Library
         /// <param name="data">PIT buffer</param>
         public void FlashPit(byte[] data)
         {
-            AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Flashing PIT...");
+            LogFunction("Flashing PIT...");
             SendPacket(new BeginPitFlashPacket(), 6000);
             var packet = (IInboundPacket) new PitResponse();
             ReadPacket(ref packet, 6000);
@@ -405,7 +467,7 @@ namespace Hreidmar.Library
             ReadPacket(ref packet, 6000);
             SendPacket(new EndPitPacket(), 6000);
             ReadPacket(ref packet, 6000);
-            AnsiConsole.MarkupLine("[bold]<DeviceSession>[/] Successful transfer!");
+            LogFunction("Successful transfer!");
         }
 
         /// <summary>
@@ -416,7 +478,7 @@ namespace Hreidmar.Library
         /// <param name="entry">PIT entry</param>
         public void FlashFile(Stream stream, PitEntry entry, Action<int> progress)
         {
-            AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Flashing {entry.PartitionName}...");
+            LogFunction($"Flashing {entry.PartitionName}...");
             stream.Seek(0, SeekOrigin.Begin); // Failsafe
             SendPacket(new BeginFileFlashPacket(), 6000);
             var packet = (IInboundPacket) new FileResponse();
@@ -475,7 +537,7 @@ namespace Hreidmar.Library
                 packet = new FileResponse();
                 ReadPacket(ref packet, 6000);
             }
-            AnsiConsole.MarkupLine($"[bold]<DeviceSession>[/] Done!");
+            LogFunction($"Done!");
         }
 
         /// <summary>
@@ -483,14 +545,11 @@ namespace Hreidmar.Library
         /// </summary>
         public void Dispose()
         {
-            void CheckForErrors() {
+            if (_sessionBegan) EndSession();
+            if (_deviceHandle != null) {
+                _error = MonoUsbApi.ReleaseInterface(_deviceHandle, _interfaceId);
                 if (_error != 0) 
                     throw new Exception($"{_error}");
-            }
-            
-            if (SessionBegan) EndSession();
-            if (_deviceHandle != null) {
-                _error = MonoUsbApi.ReleaseInterface(_deviceHandle, _interfaceId); CheckForErrors();
                 _deviceHandle.Close();
             }
             _sessionHandle.Close();

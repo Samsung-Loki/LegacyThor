@@ -2,10 +2,7 @@ using System.IO;
 
 namespace Hreidmar.Library.Packets.Outbound
 {
-    /// <summary>
-    /// Get device type
-    /// </summary>
-    public class DeviceTypePacket : IOutboundPacket
+    public class EraseUserDataPacket : IOutboundPacket
     {
         public byte[] Pack()
         {
@@ -13,7 +10,7 @@ namespace Hreidmar.Library.Packets.Outbound
             using var memory = new MemoryStream(buf);
             using var stream = new BinaryWriter(memory);
             stream.Write((int)PacketType.Session);
-            stream.Write((int)SessionCommands.DeviceType);
+            stream.Write((int)SessionCommands.EraseUserData);
             return memory.ToArray();
         }
         

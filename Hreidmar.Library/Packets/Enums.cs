@@ -33,9 +33,14 @@ namespace Hreidmar.Library.Packets
     {
         Begin = 0x00,
         TFlash = 0x08,
+        /// <summary>
+        /// Always returns 30. Does something different now.
+        /// </summary>
         DeviceType = 0x01,
         TotalBytes = 0x02,
-        FilePartSize = 0x05
+        FilePartSize = 0x05,
+        EraseUserData = 0x07,
+        PrintSalesCode = 0x09
     }
 
     /// <summary>
@@ -43,6 +48,7 @@ namespace Hreidmar.Library.Packets
     /// </summary>
     public enum EndSessionCommands
     {
+        Shutdown = 0x03,
         Reboot = 0x01,
         End = 0x00
     }
