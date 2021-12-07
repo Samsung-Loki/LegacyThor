@@ -84,7 +84,7 @@ namespace Hreidmar.GUI
                 ImGui.Checkbox("Handshake on connect", ref _options.AutoHandshake);
                 ImGui.Checkbox("T-Flash", ref _options.EnableTFlash);
                 var enumValue = (ProtocolVersion) _protocolVersionIndex;
-                ImGui.SliderInt("Protocol", ref _protocolVersionIndex, 3, 4, enumValue.ToString());
+                ImGui.SliderInt("Protocol", ref _protocolVersionIndex, 0x03, 0x04, enumValue.ToString());
                 _options.Protocol = enumValue;
                 if (_session != null) {
                     ImGui.Separator();
