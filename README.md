@@ -2,6 +2,7 @@
 ![badges](https://img.shields.io/github/forks/Samsung-Loki/Hreidmar.svg)
 ![badges](https://img.shields.io/github/stars/Samsung-Loki/Hreidmar.svg)
 ![badges](https://img.shields.io/github/issues/Samsung-Loki/Hreidmar.svg)
+[![Build CI](https://github.com/Samsung-Loki/Hreidmar/actions/workflows/build.yml/badge.svg)](https://github.com/Samsung-Loki/Hreidmar/actions/workflows/build.yml)
 # Hreidmar
 Hreidmar is an alternative to well-known [Heimdall](https://github.com/Benjamin-Dobell/Heimdall). \
 Written purely in C#. Uses [LibUsbDotNet](https://github.com/LibUsbDotNet/LibUsbDotNet) for communication.
