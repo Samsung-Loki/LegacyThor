@@ -84,7 +84,7 @@ namespace Hreidmar.Library
         private int _transferTimeout = 30000;
         // Session
         public bool SessionBegan = false;
-        public bool HanshakeDone = false;
+        public bool HandshakeDone = false;
         public bool TFlashEnabled = false;
         // Options
         private OptionsClass _options;
@@ -150,7 +150,7 @@ namespace Hreidmar.Library
                 throw new Exception("You can't disable TFlash until a reboot!");
             if (SessionBegan && options.ResumeSession)
                 throw new Exception("Session already began, you can't resume it!");
-            if (HanshakeDone && options.ResumeUsbConnection)
+            if (HandshakeDone && options.ResumeUsbConnection)
                 throw new Exception("Handshake was already done, you can't resume it!");
             if (_options.AutoHandshake && !options.AutoHandshake)
                 throw new Exception("Auto-handshake can't be disabled after it was already done!");
@@ -222,7 +222,7 @@ namespace Hreidmar.Library
             if (_options.AutoHandshake && !_options.ResumeUsbConnection) Handshake();
             if (_options.EnableTFlash) EnableTFlash();
             SessionBegan = _options.ResumeSession;
-            HanshakeDone = _options.ResumeUsbConnection;
+            HandshakeDone = _options.ResumeUsbConnection;
         }
 
         /// <summary>
@@ -234,6 +234,7 @@ namespace Hreidmar.Library
              SendPacket(new HandshakePacket(), 6000);
              var packet = (IInboundPacket) new HandshakeResponse();
              ReadPacket(ref packet, 6000);
+             HandshakeDone = true;
         }
 
         /// <summary>

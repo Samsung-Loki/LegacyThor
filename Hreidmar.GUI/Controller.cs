@@ -143,7 +143,7 @@ namespace Hreidmar.GUI
                 }
 
                 ImGui.RadioButton("Session active", _session.SessionBegan);
-                ImGui.RadioButton("Handshake done", _session.HanshakeDone);
+                ImGui.RadioButton("Handshake done", _session.HandshakeDone);
                 ImGui.RadioButton("T-Flash", _session.TFlashEnabled);
             }
             _imGuiRenderer.AfterLayout();
