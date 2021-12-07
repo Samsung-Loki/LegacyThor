@@ -14,7 +14,6 @@ namespace Hreidmar.Library.Packets.Inbound
             var str = Encoding.ASCII.GetString(stream.ReadBytes(4));
             if (str != "LOKE")
                 throw new Exception($"Invalid response: {str}");
-            AnsiConsole.MarkupLine($"[bold]<HandshakeResponse>[/] Received {str}");
         }
 
         public int GetSize() => 4;

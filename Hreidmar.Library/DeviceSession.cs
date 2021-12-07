@@ -83,14 +83,12 @@ namespace Hreidmar.Library
         private int _transferPacketSize = 131072;
         private int _transferTimeout = 30000;
         // Session
-        private bool _sessionBegan = false;
-        private bool _hanshakeDone = false;
-        private bool _tFlashEnabled = false;
+        public bool SessionBegan = false;
+        public bool HanshakeDone = false;
+        public bool TFlashEnabled = false;
         // Options
         private OptionsClass _options;
         public Action<string> LogFunction;
-
-        public DeviceSession(bool ok) { }
 
         /// <summary>
         /// Find a samsung device and initialize it
@@ -148,17 +146,17 @@ namespace Hreidmar.Library
         /// </summary>
         public void ApplyChanges(OptionsClass options)
         {
-            if (_tFlashEnabled && options.EnableTFlash)
+            if (TFlashEnabled && options.EnableTFlash)
                 throw new Exception("You can't disable TFlash until a reboot!");
-            if (_sessionBegan && options.ResumeSession)
+            if (SessionBegan && options.ResumeSession)
                 throw new Exception("Session already began, you can't resume it!");
-            if (_hanshakeDone && options.ResumeUsbConnection)
+            if (HanshakeDone && options.ResumeUsbConnection)
                 throw new Exception("Handshake was already done, you can't resume it!");
             if (_options.AutoHandshake && !options.AutoHandshake)
                 throw new Exception("Auto-handshake can't be disabled after it was already done!");
             if (!_options.AutoHandshake && options.AutoHandshake)
                 throw new Exception("Auto-handshake can't be enabled after initialization was done!");
-            if (options.Protocol != _options.Protocol && !_sessionBegan)
+            if (options.Protocol != _options.Protocol && !SessionBegan)
                 throw new Exception("Protocol can't be changed while you have an active session!");
             _options = options;
         }
@@ -223,8 +221,8 @@ namespace Hreidmar.Library
             _reader = _device.OpenEndpointReader((ReadEndpointID) _readEndpoint);
             if (_options.AutoHandshake && !_options.ResumeUsbConnection) Handshake();
             if (_options.EnableTFlash) EnableTFlash();
-            _sessionBegan = _options.ResumeSession;
-            _hanshakeDone = _options.ResumeUsbConnection;
+            SessionBegan = _options.ResumeSession;
+            HanshakeDone = _options.ResumeUsbConnection;
         }
 
         /// <summary>
@@ -324,7 +322,7 @@ namespace Hreidmar.Library
         /// <exception cref="Exception">Error occured</exception>
         public void BeginSession()
         {
-            if (_sessionBegan)
+            if (SessionBegan)
                 throw new Exception("Session already began!");
             LogFunction("Beginning session...");
             SendPacket(new SessionSetupPacket { Version = _options.Protocol }, 6000);
@@ -345,17 +343,24 @@ namespace Hreidmar.Library
             }
             
             LogFunction("Session began!");
-            _sessionBegan = true;
+            SessionBegan = true;
         }
+
+        /// <summary>
+        /// Is the device connected?
+        /// </summary>
+        /// <returns>Common sense</returns>
+        public bool IsConnected()
+            => _device.IsOpen;
 
         /// <summary>
         /// Enable T-Flash
         /// </summary>
         public void EnableTFlash()
         {
-            if (_tFlashEnabled)
+            if (TFlashEnabled)
                 throw new Exception("TFlash cannot be disabled!");
-            if (!_sessionBegan) BeginSession();
+            if (!SessionBegan) BeginSession();
             LogFunction("Enabling T-Flash...");
             SendPacket(new EnableTFlashPacket(), 6000);
             var packet = (IInboundPacket) new SessionSetupResponse();
@@ -374,7 +379,7 @@ namespace Hreidmar.Library
         /// <returns>PIT data buffer</returns>
         public byte[] DumpPit(Action<int> progress)
         {
-            if (!_sessionBegan) BeginSession();
+            if (!SessionBegan) BeginSession();
             SendPacket(new BeginPitDumpPacket(), 6000);
             var packet = (IInboundPacket) new BeginPitDumpResponse();
             ReadPacket(ref packet, 6000);
@@ -406,7 +411,7 @@ namespace Hreidmar.Library
         /// <param name="length">Total byte size</param>
         public void ReportTotalBytes(IEnumerable<ulong> length)
         {
-            if (!_sessionBegan) BeginSession();
+            if (!SessionBegan) BeginSession();
             // Doing this fixes invalid percentage drawing.
             // For no reason it adds entire packet's size,
             // even if it's bigger that size reported. 
@@ -437,7 +442,7 @@ namespace Hreidmar.Library
         /// </summary>
         public void EndSession()
         {
-            if (!_sessionBegan) 
+            if (!SessionBegan) 
                 throw new Exception("Session has not started yet!");
             LogFunction("Ending session...");
             SendPacket(new EndSessionPacket(), 6000);
@@ -446,7 +451,7 @@ namespace Hreidmar.Library
 
             if (_options.AutoReboot) Reboot();
             LogFunction("Session ended!");
-            _sessionBegan = false;
+            SessionBegan = false;
         }
 
         /// <summary>
@@ -545,7 +550,7 @@ namespace Hreidmar.Library
         /// </summary>
         public void Dispose()
         {
-            if (_sessionBegan) EndSession();
+            if (SessionBegan) EndSession();
             if (_deviceHandle != null) {
                 _error = MonoUsbApi.ReleaseInterface(_deviceHandle, _interfaceId);
                 if (_error != 0) 
