@@ -130,6 +130,13 @@ namespace Hreidmar.GUI
                     catch (Exception e) { _loggingData += $"Exception occured: {e}"; }
                 }
                 
+                if (ImGui.Button("Dispose")) {
+                    try {
+                        _session.Dispose();
+                        _session = null;
+                    } catch (Exception e) { _loggingData += $"Exception occured: {e}"; _session = null; }
+                }
+                
                 if (ImGui.Button("Reboot")) {
                     try { _session.Reboot(); } 
                     catch (Exception e) { _loggingData += $"Exception occured: {e}"; }
@@ -138,13 +145,6 @@ namespace Hreidmar.GUI
                 ImGui.RadioButton("Session active", _session.SessionBegan);
                 ImGui.RadioButton("Handshake done", _session.HanshakeDone);
                 ImGui.RadioButton("T-Flash", _session.TFlashEnabled);
-                
-                if (ImGui.Button("Dispose")) {
-                    try {
-                        _session.Dispose();
-                        _session = null;
-                    } catch (Exception e) { _loggingData += $"Exception occured: {e}"; _session = null; }
-                }
             }
             _imGuiRenderer.AfterLayout();
             base.Draw(gameTime);
