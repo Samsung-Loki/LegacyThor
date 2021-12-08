@@ -44,14 +44,6 @@
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
             <Link>cimgui.dll</Link>
         </Content>
-        <Content Include="nothing.png">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-            <Link>resources/nothing.png</Link>
-        </Content>
-        <Content Include="download-mode.png">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-            <Link>resources/download-mode.png</Link>
-        </Content>
     </ItemGroup>
     <ItemGroup>
       <ProjectReference Include="..\Hreidmar.Library\Hreidmar.Library.csproj" />

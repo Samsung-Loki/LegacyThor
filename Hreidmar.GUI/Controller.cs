@@ -58,11 +58,7 @@ namespace Hreidmar.GUI
                 return UsbDevice.AllDevices[_currentDeviceIndex];
             }
         }
-
-        private IntPtr _noDevice;
-        private IntPtr _deviceConnected;
-        private Num.Vector2 _noDeviceSize;
-        private Num.Vector2 _deviceConnectedSize;
+        
         private bool _unsafeCommands;
         private bool _unlockPit;
 
@@ -93,38 +89,20 @@ namespace Hreidmar.GUI
             base.Initialize();
         }
 
-        protected override void LoadContent()
-        {
-            using var s1 = new FileStream("resources/download-mode.png", FileMode.Open);
-            using var s2 = new FileStream("resources/nothing.png", FileMode.Open);
-            var t1 = Texture2D.FromStream(GraphicsDevice, s1);
-            _deviceConnected = _imGuiRenderer.BindTexture(t1);
-            _deviceConnectedSize = new Num.Vector2(t1.Width, t1.Height);
-            var t2 = Texture2D.FromStream(GraphicsDevice, s2);
-            _noDevice = _imGuiRenderer.BindTexture(t2);
-            _noDeviceSize = new Num.Vector2(t2.Width, t2.Height);
-            base.LoadContent();
-        }
-
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(new Color(114, 144, 154));
             _imGuiRenderer.BeforeLayout(gameTime);
             ImGui.DockSpaceOverViewport(ImGui.GetMainViewport());
-            if (ImGui.Begin("Device Info", ImGuiWindowFlags.AlwaysAutoResize)) {
-                if (_session != null && _session.IsConnected()) {
-                    ImGui.Image(_deviceConnected, _deviceConnectedSize);
-                    ImGui.Separator();
-                    var model = _session.Information.ContainsKey("MODEL") ? _session.Information["MODEL"] : "Empty";
-                    var salesCode = _session.Information.ContainsKey("SALES") ? _session.Information["SALES"] : "Empty";
-                    var firmware = _session.Information.ContainsKey("VER") ? _session.Information["VER"] : "Empty";
-                    var did = _session.Information.ContainsKey("DID") ? _session.Information["DID"] : "Empty";
-                    ImGui.Text($"Model: {model}");
-                    ImGui.Text($"Region: {salesCode}");
-                    ImGui.Text($"Firmware: {firmware}");
-                    ImGui.Text($"DID: {did}");
-                } else ImGui.Image(_noDevice, _noDeviceSize);
-                ImGui.End();
+            if (_session != null && ImGui.Begin("Device Info", ImGuiWindowFlags.AlwaysAutoResize)) {
+                var model = _session.Information.ContainsKey("MODEL") ? _session.Information["MODEL"] : "Empty";
+                var salesCode = _session.Information.ContainsKey("SALES") ? _session.Information["SALES"] : "Empty";
+                var firmware = _session.Information.ContainsKey("VER") ? _session.Information["VER"] : "Empty";
+                var did = _session.Information.ContainsKey("DID") ? _session.Information["DID"] : "Empty";
+                ImGui.Text($"Model: {model}");
+                ImGui.Text($"Region: {salesCode}");
+                ImGui.Text($"Firmware: {firmware}");
+                ImGui.Text($"DID: {did}");
             }
             if (ImGui.Begin("Options", ImGuiWindowFlags.AlwaysAutoResize)) {
                 ImGui.Checkbox("Resume USB connection", ref _options.ResumeUsbConnection);
