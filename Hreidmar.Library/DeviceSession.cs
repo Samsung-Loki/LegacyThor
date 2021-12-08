@@ -76,6 +76,7 @@ namespace Hreidmar.Library
         private byte _writeEndpoint = 0xFF;
         private UsbEndpointWriter _writer;
         private UsbEndpointReader _reader;
+        private UsbRegistry _registry;
         private UsbDevice _device;
         private int _error;
         // File flashing stuff
@@ -126,7 +127,7 @@ namespace Hreidmar.Library
         /// <param name="device">USB device</param>
         /// <param name="options">Options</param>
         /// <param name="log">Logging</param>
-        public DeviceSession(UsbDevice device, OptionsClass options, Action<string> log)
+        public DeviceSession(UsbRegistry device, OptionsClass options, Action<string> log)
         {
             LogFunction = log;
             _options = options;
@@ -134,10 +135,11 @@ namespace Hreidmar.Library
             if (UsbDevice.LastErrorString.Contains("Access denied", StringComparison.CurrentCultureIgnoreCase))
                 throw new Exception("Access denied!");
             try {
-                var mono = (MonoUsbDevice) device;
+                var mono = (MonoUsbDevice) device.Device;
                 _deviceHandle = mono.Profile.OpenDeviceHandle();
             } catch { /* Ignore */ }
-            _device = device;
+            _device = device.Device;
+            _registry = device;
             Initialize();
         }
 
@@ -148,11 +150,11 @@ namespace Hreidmar.Library
         {
             if (TFlashEnabled && options.EnableTFlash)
                 throw new Exception("You can't disable TFlash until a reboot!");
-            if (SessionBegan && options.ResumeSession)
-                throw new Exception("Session already began, you can't resume it!");
-            if (HandshakeDone && options.ResumeUsbConnection)
-                throw new Exception("Handshake was already done, you can't resume it!");
-            if (_options.AutoHandshake && !options.AutoHandshake)
+            if (options.ResumeSession != _options.ResumeSession)
+                throw new Exception("Resume Session setting can't be changed!");
+            if (options.ResumeUsbConnection != _options.ResumeUsbConnection)
+                throw new Exception("Resume USB connection setting can't be changed!");
+            if (_options.AutoHandshake && !options.AutoHandshake )
                 throw new Exception("Auto-handshake can't be disabled after it was already done!");
             if (!_options.AutoHandshake && options.AutoHandshake)
                 throw new Exception("Auto-handshake can't be enabled after initialization was done!");
@@ -219,10 +221,10 @@ namespace Hreidmar.Library
 
             _writer = _device.OpenEndpointWriter((WriteEndpointID) _writeEndpoint);
             _reader = _device.OpenEndpointReader((ReadEndpointID) _readEndpoint);
-            if (_options.AutoHandshake && !_options.ResumeUsbConnection) Handshake();
-            if (_options.EnableTFlash) EnableTFlash();
             SessionBegan = _options.ResumeSession;
             HandshakeDone = _options.ResumeUsbConnection;
+            if (_options.AutoHandshake && !_options.ResumeUsbConnection) Handshake();
+            if (_options.EnableTFlash) EnableTFlash();
         }
 
         /// <summary>
@@ -352,7 +354,7 @@ namespace Hreidmar.Library
         /// </summary>
         /// <returns>Common sense</returns>
         public bool IsConnected()
-            => _device.IsOpen;
+            => _registry.IsAlive;
 
         /// <summary>
         /// Enable T-Flash
@@ -378,7 +380,7 @@ namespace Hreidmar.Library
         /// </summary>
         /// <param name="progress">Report progress</param>
         /// <returns>PIT data buffer</returns>
-        public byte[] DumpPit(Action<int> progress)
+        public byte[] DumpPit(Action<int, int> progress)
         {
             if (!SessionBegan) BeginSession();
             SendPacket(new BeginPitDumpPacket(), 6000);
@@ -398,7 +400,7 @@ namespace Hreidmar.Library
                 if (read != 500 && !last)
                     throw new Exception($"Read not enough bytes: {read}");
                 buf.AddRange(tmpbuf);
-                progress(read);
+                progress(read, size);
             }
             SendPacket(new EndPitPacket(), 6000);
             packet = new PitResponse();
@@ -436,6 +438,30 @@ namespace Hreidmar.Library
             var packet = (IInboundPacket) new EndSessionResponse();
             ReadPacket(ref packet, 6000);
             LogFunction("Device rebooted!");
+        }
+        
+        /// <summary>
+        /// Shuts off your device
+        /// </summary>
+        public void Shutdown()
+        {
+            LogFunction("Shutting down...");
+            SendPacket(new ShutdownDevicePacket(), 6000);
+            var packet = (IInboundPacket) new EndSessionResponse();
+            ReadPacket(ref packet, 6000);
+            LogFunction("Device shut down!");
+        }
+        
+        /// <summary>
+        /// Shuts off your device
+        /// </summary>
+        public void PrintSalesCode()
+        {
+            LogFunction("Sending print sales code packet...");
+            SendPacket(new PrintSalesCodePacket(), 6000);
+            var packet = (IInboundPacket) new SessionSetupResponse();
+            ReadPacket(ref packet, 6000);
+            LogFunction("Done!");
         }
 
         /// <summary>

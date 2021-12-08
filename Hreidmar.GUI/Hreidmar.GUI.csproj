@@ -27,6 +27,7 @@
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="ImGui.NET" Version="1.78.0" />
+        <PackageReference Include="LibUsbDotNet" Version="2.2.29" />
         <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.0.1641" />
         <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.0.1641" />
     </ItemGroup>
@@ -42,6 +43,14 @@
         <Content Include="..\deps\cimgui\cimgui.dll" Condition="'$(OS)' == 'Windows_NT'">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
             <Link>cimgui.dll</Link>
+        </Content>
+        <Content Include="nothing.png">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <Link>resources/nothing.png</Link>
+        </Content>
+        <Content Include="download-mode.png">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <Link>resources/download-mode.png</Link>
         </Content>
     </ItemGroup>
     <ItemGroup>
