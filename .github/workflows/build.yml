@@ -27,8 +27,8 @@ jobs:
     - name: Upload Syndical.Application binary
       uses: actions/upload-artifact@v2.2.4
       with:
-        name: "Hreidmar.Application-linux"
-        path: "Hreidmar.Application/bin/"
+        name: "Hreidmar.GUI-linux"
+        path: "Hreidmar.GUI/bin/"
   windows:
     name: Windows build
     runs-on: windows-2022
@@ -49,8 +49,8 @@ jobs:
     - name: Upload Syndical.Application binary
       uses: actions/upload-artifact@v2.2.4
       with:
-        name: "Hreidmar.Application-windows"
-        path: "Hreidmar.Application/bin/"
+        name: "Hreidmar.GUI-windows"
+        path: "Hreidmar.GUI/bin/"
   macos:
     name: MacOS build
     runs-on: macos-11
@@ -71,5 +71,5 @@ jobs:
     - name: Upload Syndical.Application binary
       uses: actions/upload-artifact@v2.2.4
       with:
-        name: "Hreidmar.Application-macos"
-        path: "Hreidmar.Application/bin/"
+        name: "Hreidmar.GUI-macos"
+        path: "Hreidmar.GUI/bin/"
