@@ -111,17 +111,25 @@ namespace Hreidmar.GUI
             GraphicsDevice.Clear(new Color(114, 144, 154));
             _imGuiRenderer.BeforeLayout(gameTime);
             ImGui.DockSpaceOverViewport(ImGui.GetMainViewport());
-            if (ImGui.Begin("Decoration", ImGuiWindowFlags.AlwaysAutoResize)) {
-                if (_session != null && _session.IsConnected()) 
+            if (ImGui.Begin("Device Info", ImGuiWindowFlags.AlwaysAutoResize)) {
+                if (_session != null && _session.IsConnected()) {
                     ImGui.Image(_deviceConnected, _deviceConnectedSize);
-                else ImGui.Image(_noDevice, _noDeviceSize);
+                    ImGui.Separator();
+                    var model = _session.Information.ContainsKey("MODEL") ? _session.Information["MODEL"] : "Empty";
+                    var salesCode = _session.Information.ContainsKey("SALES") ? _session.Information["SALES"] : "Empty";
+                    var firmware = _session.Information.ContainsKey("VER") ? _session.Information["VER"] : "Empty";
+                    var did = _session.Information.ContainsKey("DID") ? _session.Information["DID"] : "Empty";
+                    ImGui.Text($"Model: {model}");
+                    ImGui.Text($"Region: {salesCode}");
+                    ImGui.Text($"Firmware: {firmware}");
+                    ImGui.Text($"DID: {did}");
+                } else ImGui.Image(_noDevice, _noDeviceSize);
                 ImGui.End();
             }
             if (ImGui.Begin("Options", ImGuiWindowFlags.AlwaysAutoResize)) {
                 ImGui.Checkbox("Resume USB connection", ref _options.ResumeUsbConnection);
                 ImGui.Checkbox("Resume session", ref _options.ResumeSession);
                 ImGui.Checkbox("Automatic reboot", ref _options.AutoReboot);
-                ImGui.Checkbox("Handshake on connect", ref _options.AutoHandshake);
                 ImGui.Checkbox("T-Flash", ref _options.EnableTFlash);
                 var enumValue = (ProtocolVersion) _protocolVersionIndex;
                 ImGui.SliderInt("Protocol", ref _protocolVersionIndex, 0x03, 0x04, enumValue.ToString());
@@ -159,7 +167,7 @@ namespace Hreidmar.GUI
             }
 
             if (_session != null && ImGui.Begin("PIT", ImGuiWindowFlags.AlwaysAutoResize)) {
-                ImGui.ProgressBar(_value, new Num.Vector2(_maxValue, -1));
+                ImGui.ProgressBar(_value, new Num.Vector2(-1, _maxValue));
                 if (ImGui.Button("Dump to \"dump.pit\"")) {
                     new Thread(() => { File.WriteAllBytes("dump.pit", _session.DumpPit((i, i1) => {
                             _value = i;
@@ -237,16 +245,6 @@ namespace Hreidmar.GUI
                                 _loggingData += $"Wrote/read: {sent}/{read}\n";
                                 File.WriteAllBytes("SECCMD.bin", buf);
                                 _loggingData += $"Dump saved as SECCMD.bin\n";
-                            } catch (Exception e) { _loggingData += $"Exception occured: {e}\n"; }
-                        }
-                        if (ImGui.Button("DVIF")) {
-                            try {
-                                _session.Write(Encoding.ASCII.GetBytes("DVIF"), 6000, out var sent);
-                                var buf = new byte[1024];
-                                _session.Read(ref buf, 6000, out var read);
-                                _loggingData += $"Wrote/read: {sent}/{read}\n";
-                                File.WriteAllBytes("DVIF.bin", buf);
-                                _loggingData += $"Dump saved as DVIF.bin\n";
                             } catch (Exception e) { _loggingData += $"Exception occured: {e}\n"; }
                         }
                     }

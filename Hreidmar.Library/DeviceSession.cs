@@ -32,11 +32,6 @@ namespace Hreidmar.Library
             /// Automatically reboot after session ends.
             /// </summary>
             public bool AutoReboot = false;
-            
-            /// <summary>
-            /// Automatically perform handshake after initialization.
-            /// </summary>
-            public bool AutoHandshake = true;
 
             /// <summary>
             /// Makes DeviceSession think, that handshake was already done.
@@ -84,9 +79,10 @@ namespace Hreidmar.Library
         private int _transferPacketSize = 131072;
         private int _transferTimeout = 30000;
         // Session
-        public bool SessionBegan = false;
-        public bool HandshakeDone = false;
+        public bool SessionBegan;
+        public bool HandshakeDone;
         public bool TFlashEnabled = false;
+        public Dictionary<string, string> Information;
         // Options
         private OptionsClass _options;
         public Action<string> LogFunction;
@@ -154,10 +150,6 @@ namespace Hreidmar.Library
                 throw new Exception("Resume Session setting can't be changed!");
             if (options.ResumeUsbConnection != _options.ResumeUsbConnection)
                 throw new Exception("Resume USB connection setting can't be changed!");
-            if (_options.AutoHandshake && !options.AutoHandshake )
-                throw new Exception("Auto-handshake can't be disabled after it was already done!");
-            if (!_options.AutoHandshake && options.AutoHandshake)
-                throw new Exception("Auto-handshake can't be enabled after initialization was done!");
             if (options.Protocol != _options.Protocol && !SessionBegan)
                 throw new Exception("Protocol can't be changed while you have an active session!");
             _options = options;
@@ -223,7 +215,7 @@ namespace Hreidmar.Library
             _reader = _device.OpenEndpointReader((ReadEndpointID) _readEndpoint);
             SessionBegan = _options.ResumeSession;
             HandshakeDone = _options.ResumeUsbConnection;
-            if (_options.AutoHandshake && !_options.ResumeUsbConnection) Handshake();
+            if (!_options.ResumeUsbConnection) Handshake();
             if (_options.EnableTFlash) EnableTFlash();
         }
 
@@ -232,11 +224,17 @@ namespace Hreidmar.Library
         /// </summary>
         public void Handshake()
         {
-             LogFunction($"Doing handshake...");
-             SendPacket(new HandshakePacket(), 6000);
-             var packet = (IInboundPacket) new HandshakeResponse();
-             ReadPacket(ref packet, 6000);
-             HandshakeDone = true;
+            LogFunction($"Getting device info...");
+            SendPacket(new DeviceInfoPacket(), 6000);
+            var packet = (IInboundPacket) new DeviceInfoResponse();
+            ReadPacket(ref packet, 6000);
+            var actual = (DeviceInfoResponse) packet;
+            Information = actual.Information;
+            LogFunction($"Doing handshake...");
+            SendPacket(new HandshakePacket(), 6000);
+            packet = (IInboundPacket) new HandshakeResponse();
+            ReadPacket(ref packet, 6000);
+            HandshakeDone = true;
         }
 
         /// <summary>
