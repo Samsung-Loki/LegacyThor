@@ -60,7 +60,7 @@ namespace Hreidmar.Library
         
         // Samsung device detection
         public static readonly int SamsungKVid = 0x04E8;
-        public static readonly int[] SamsungPids = { 0x6601, 0x685D, 0x68C3 };
+        public static readonly int[] SamsungPids = { 0x6601, 0x685D, 0x68C3, 0x6860 };
         // LibUsb stuff
         private readonly MonoUsbSessionHandle _sessionHandle = new();
         private readonly MonoUsbDeviceHandle _deviceHandle;
