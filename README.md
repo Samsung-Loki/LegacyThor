@@ -7,8 +7,8 @@
 Hreidmar is an alternative to well-known [Heimdall](https://github.com/Benjamin-Dobell/Heimdall). \
 Written purely in C#. Uses [LibUsbDotNet](https://github.com/LibUsbDotNet/LibUsbDotNet) for communication.
 
-## Releases
-Hreidmar gets built on every commit by GitHub Actions. Releases are available [here](https://nightly.link/Samsung-Loki/Hreidmar/workflows/build/main)
+# Releases
+Hreidmar gets built on every commit by GitHub Actions. Releases are available here: [Nigtly.link](https://nightly.link/Samsung-Loki/Hreidmar/workflows/build/main)
 
 ## Credits
 [TheAirBlow](https://github.com/theairblow) for Hreidmar \
