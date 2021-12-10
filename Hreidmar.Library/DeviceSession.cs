@@ -60,7 +60,7 @@ namespace Hreidmar.Library
         
         // Samsung device detection
         public static readonly int SamsungKVid = 0x04E8;
-        public static readonly int[] SamsungPids = { 0x6601, 0x685D, 0x68C3, 0x6860 };
+        public static readonly int[] SamsungPids = { 0x6601, 0x685D, 0x68C3 };
         // LibUsb stuff
         private readonly MonoUsbSessionHandle _sessionHandle = new();
         private readonly MonoUsbDeviceHandle _deviceHandle;
@@ -82,7 +82,7 @@ namespace Hreidmar.Library
         public bool SessionBegan;
         public bool HandshakeDone;
         public bool TFlashEnabled = false;
-        public Dictionary<string, string> Information;
+        //public Dictionary<string, string> Information;
         // Options
         private OptionsClass _options;
         public Action<string> LogFunction;
@@ -224,15 +224,15 @@ namespace Hreidmar.Library
         /// </summary>
         public void Handshake()
         {
-            LogFunction($"Getting device info...");
-            SendPacket(new DeviceInfoPacket(), 6000);
-            var packet = (IInboundPacket) new DeviceInfoResponse();
-            ReadPacket(ref packet, 6000);
-            var actual = (DeviceInfoResponse) packet;
-            Information = actual.Information;
+            //LogFunction($"Getting device info...");
+            //SendPacket(new DeviceInfoPacket(), 6000);
+            //var packet = (IInboundPacket) new DeviceInfoResponse();
+            //ReadPacket(ref packet, 6000);
+            //var actual = (DeviceInfoResponse) packet;
+            //Information = actual.Information;
             LogFunction($"Doing handshake...");
             SendPacket(new HandshakePacket(), 6000);
-            packet = (IInboundPacket) new HandshakeResponse();
+            var packet = (IInboundPacket) new HandshakeResponse();
             ReadPacket(ref packet, 6000);
             HandshakeDone = true;
         }
@@ -506,15 +506,15 @@ namespace Hreidmar.Library
         /// <param name="progress">Report progress</param>
         /// <param name="stream">Stream</param>
         /// <param name="entry">PIT entry</param>
-        public void FlashFile(Stream stream, PitEntry entry, Action<int> progress)
+        public void FlashFile(Stream stream, PitEntry entry, Action<ulong> progress)
         {
             LogFunction($"Flashing {entry.PartitionName}...");
-            stream.Seek(0, SeekOrigin.Begin); // Failsafe
             SendPacket(new BeginFileFlashPacket(), 6000);
             var packet = (IInboundPacket) new FileResponse();
             ReadPacket(ref packet, 6000);
             
             var sequence = _packetsPerSequence * _transferPacketSize;
+            var done = 0ul;
             // ReSharper disable once PossibleLossOfFraction
             var count = (int)Math.Ceiling((double)stream.Length / sequence);
             for (var i = 0; i < count; i++) {
@@ -529,19 +529,28 @@ namespace Hreidmar.Library
                     var read2 = j * _transferPacketSize;
                     var left2 = size - read2;
                     var size2 = Math.Min(_transferPacketSize, left2);
-                    var buf = new byte[_transferPacketSize];
-                    var bytes = stream.Read(buf, 0, size2);
-                    while (bytes != size2) // Workaround if data is not available yet
-                        bytes += stream.Read(buf, 0, size2 - bytes);
-                    Write(buf, 6000, out var wrote);
-                    if (wrote != buf.Length)
-                        throw new Exception($"Buffer size {buf.Length}, sent {wrote}");
+                    var buf = new List<byte>();
+                    var tmpbuf = new byte[size2];
+                    var bytes = stream.Read(tmpbuf, 0, size2);
+                    buf.AddRange(tmpbuf.Take(bytes));
+                    while (bytes != size2) { // Workaround if data is not available yet
+                        tmpbuf = new byte[size2 - bytes];
+                        var read3 = stream.Read(tmpbuf, 0, size2 - bytes);
+                        buf.AddRange(tmpbuf.Take(read3));
+                        bytes += read3;
+                    }
+                    var arr = buf.ToArray();
+                    Array.Resize(ref arr, _transferPacketSize);
+                    Write(arr, 6000, out var wrote);
+                    if (wrote != arr.Length)
+                        throw new Exception($"Buffer size {arr.Length}, sent {wrote}");
                     packet = new FilePartResponse();
                     ReadPacket(ref packet, 6000);
                     var actual = (FilePartResponse) packet;
                     if (actual.Index != j)
                         throw new Exception($"Actual index {j}, received index {actual.Index}");
-                    progress(wrote);
+                    done += (ulong)wrote;
+                    progress(done);
                 }
 
                 switch (entry.BinaryType) {
