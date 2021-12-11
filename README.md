@@ -8,8 +8,8 @@ Hreidmar is an alternative to well-known [Heimdall](https://github.com/Benjamin-
 Written purely in C#. Uses [LibUsbDotNet](https://github.com/LibUsbDotNet/LibUsbDotNet) for communication.
 
 # Development suspended
-Hreidmar **development will be suspended** until I get **a phone for testing** or find **someone to test Hreidmar** for me. \
-Until that, **I will only look at issues**. Contact me on Discord: **TheAirBlow#1917**.
+Hreidmar **development will be suspended** until I find someone to test Hreidmar for me. \
+Until that, **I will only look at issues**. Contact me on Discord: TheAirBlow#1917.
 
 ## FAQ
 Q: A fatal error occurred. The required library *something* could not be found. \
