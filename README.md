@@ -13,9 +13,9 @@ Until that, **I will only look at issues**. Contact me on Discord: **TheAirBlow#
 
 ## FAQ
 Q: A fatal error occurred. The required library *something* could not be found. \
-A: Look at this issue: [Link](https://github.com/Samsung-Loki/Hreidmar/issues/5) \
+A: Look at this issue: [Link](https://github.com/Samsung-Loki/Hreidmar/issues/5)
 
-Q: What is required to build/run Hreidmar?
+Q: What is required to build/run Hreidmar? \
 A: You need to install .NET 5.0 runtime to run Hreidmar, .NET 5.0 SDK and .NET Core 3.0.1 Runtime to build.
 
 ## Releases
