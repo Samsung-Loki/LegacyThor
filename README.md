@@ -7,7 +7,18 @@
 Hreidmar is an alternative to well-known [Heimdall](https://github.com/Benjamin-Dobell/Heimdall). \
 Written purely in C#. Uses [LibUsbDotNet](https://github.com/LibUsbDotNet/LibUsbDotNet) for communication.
 
-# Releases
+# Development suspended
+Hreidmar **development will be suspended** until I get **a phone for testing** or find **someone to test Hreidmar** for me. \
+Until that, **I will only look at issues**. Contact me on Discord: **TheAirBlow#1917**.
+
+## FAQ
+Q: A fatal error occurred. The required library *something* could not be found. \
+A: Look at this issue: [Link](https://github.com/Samsung-Loki/Hreidmar/issues/5) \
+
+Q: What is required to build/run Hreidmar?
+A: You need to install .NET 5.0 runtime to run Hreidmar, .NET 5.0 SDK and .NET Core 3.0.1 Runtime to build.
+
+## Releases
 Hreidmar gets built on every commit by GitHub Actions. Releases are available here: [Nigtly.link](https://nightly.link/Samsung-Loki/Hreidmar/workflows/build/main)
 
 ## Credits
