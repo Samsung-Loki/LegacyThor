@@ -20,33 +20,26 @@ namespace Nez.ImGuiTools
 		public static FilePicker GetFolderPicker(object o, string startingPath)
 			=> GetFilePicker(o, startingPath, null, true);
 
-		public static FilePicker GetFilePicker(object o, string startingPath, string searchFilter = null, bool onlyAllowFolders = false)
+		public static FilePicker GetFilePicker(object o, string startingPath, string searchFilter = null, bool onlyAllowFolders = false) 
 		{
-			if (File.Exists(startingPath))
-			{
-				startingPath = new FileInfo(startingPath).DirectoryName;
-			}
-			else if (string.IsNullOrEmpty(startingPath) || !Directory.Exists(startingPath))
-			{
+			if (File.Exists(startingPath)) startingPath = new FileInfo(startingPath).DirectoryName;
+			else if (string.IsNullOrEmpty(startingPath) || !Directory.Exists(startingPath)) {
 				startingPath = Environment.CurrentDirectory;
 				if (string.IsNullOrEmpty(startingPath))
 					startingPath = AppContext.BaseDirectory;
 			}
 
-			if (!_filePickers.TryGetValue(o, out FilePicker fp))
-			{
-				fp = new FilePicker();
-				fp.RootFolder = startingPath;
-				fp.CurrentFolder = startingPath;
-				fp.OnlyAllowFolders = onlyAllowFolders;
+			if (!_filePickers.TryGetValue(o, out FilePicker fp)) {
+				fp = new FilePicker {
+					RootFolder = startingPath,
+					CurrentFolder = startingPath,
+					OnlyAllowFolders = onlyAllowFolders
+				};
 
 				if (searchFilter != null)
 				{
-					if (fp.AllowedExtensions != null)
-						fp.AllowedExtensions.Clear();
-					else
-						fp.AllowedExtensions = new List<string>();
-					
+					if (fp.AllowedExtensions != null) fp.AllowedExtensions.Clear();
+					else fp.AllowedExtensions = new List<string>();
 					fp.AllowedExtensions.AddRange(searchFilter.Split(new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries));
 				}
 
@@ -63,13 +56,10 @@ namespace Nez.ImGuiTools
 			ImGui.Text("Current Folder: " + Path.GetFileName(RootFolder) + CurrentFolder.Replace(RootFolder, ""));
 			bool result = false;
 
-			if (ImGui.BeginChildFrame(1, new Num.Vector2(400, 400)))
-			{
+			if (ImGui.BeginChildFrame(1, new Num.Vector2(400, 400))) {
 				var di = new DirectoryInfo(CurrentFolder);
-				if (di.Exists)
-				{
-					if (di.Parent != null && CurrentFolder != RootFolder)
-					{
+				if (di.Exists) {
+					if (di.Parent != null && CurrentFolder != RootFolder) {
 						ImGui.PushStyleColor(ImGuiCol.Text, Color.Yellow.PackedValue);
 						if (ImGui.Selectable("../", false, ImGuiSelectableFlags.DontClosePopups))
 							CurrentFolder = di.Parent.FullName;
@@ -78,25 +68,20 @@ namespace Nez.ImGuiTools
 					}
 
 					var fileSystemEntries = GetFileSystemEntries(di.FullName);
-					foreach (var fse in fileSystemEntries)
-					{
-						if (Directory.Exists(fse))
-						{
+					foreach (var fse in fileSystemEntries) {
+						if (Directory.Exists(fse)) {
 							var name = Path.GetFileName(fse);
 							ImGui.PushStyleColor(ImGuiCol.Text, Color.Yellow.PackedValue);
 							if (ImGui.Selectable(name + "/", false, ImGuiSelectableFlags.DontClosePopups))
 								CurrentFolder = fse;
 							ImGui.PopStyleColor();
-						}
-						else
-						{
+						} else {
 							var name = Path.GetFileName(fse);
 							bool isSelected = SelectedFile == fse;
 							if (ImGui.Selectable(name, isSelected, ImGuiSelectableFlags.DontClosePopups))
 								SelectedFile = fse;
 
-							if (ImGui.IsMouseDoubleClicked(0))
-							{
+							if (ImGui.IsMouseDoubleClicked(0)) {
 								result = true;
 								ImGui.CloseCurrentPopup();
 							}
@@ -105,29 +90,22 @@ namespace Nez.ImGuiTools
 				}
 			}
 			ImGui.EndChildFrame();
-
-
-			if (ImGui.Button("Cancel"))
-			{
+			
+			if (ImGui.Button("Cancel")) {
 				result = false;
 				ImGui.CloseCurrentPopup();
 			}
 
-			if (OnlyAllowFolders)
-			{
+			if (OnlyAllowFolders) {
 				ImGui.SameLine();
-				if (ImGui.Button("Open"))
-				{
+				if (ImGui.Button("Open")) {
 					result = true;
 					SelectedFile = CurrentFolder;
 					ImGui.CloseCurrentPopup();
 				}
-			}
-			else if (SelectedFile != null)
-			{
+			} else if (SelectedFile != null) {
 				ImGui.SameLine();
-				if (ImGui.Button("Open"))
-				{
+				if (ImGui.Button("Open")) {
 					result = true;
 					ImGui.CloseCurrentPopup();
 				}
@@ -136,49 +114,33 @@ namespace Nez.ImGuiTools
 			return result;
 		}
 
-		bool TryGetFileInfo(string fileName, out FileInfo realFile)
-		{
-			try
-			{
+		private bool TryGetFileInfo(string fileName, out FileInfo realFile) {
+			try {
 				realFile = new FileInfo(fileName);
 				return true;
-			}
-			catch
-			{
+			} catch {
 				realFile = null;
 				return false;
 			}
 		}
 
-		List<string> GetFileSystemEntries(string fullName)
-		{
+		private List<string> GetFileSystemEntries(string fullName) {
 			var files = new List<string>();
 			var dirs = new List<string>();
 
-			foreach (var fse in Directory.GetFileSystemEntries(fullName, ""))
-			{
-				if (Directory.Exists(fse))
-				{
-					dirs.Add(fse);
-				}
-				else if (!OnlyAllowFolders)
-				{
-					if (AllowedExtensions != null)
-					{
+			foreach (var fse in Directory.GetFileSystemEntries(fullName, "")) {
+				if (Directory.Exists(fse)) dirs.Add(fse);
+				else if (!OnlyAllowFolders) {
+					if (AllowedExtensions != null) {
 						var ext = Path.GetExtension(fse);
 						if (AllowedExtensions.Contains(ext))
 							files.Add(fse);
-					}
-					else
-					{
-						files.Add(fse);
-					}
+					} else files.Add(fse);
 				}
 			}
 			
 			var ret = new List<string>(dirs);
 			ret.AddRange(files);
-
 			return ret;
 		}
 	

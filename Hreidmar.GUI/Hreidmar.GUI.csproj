@@ -52,6 +52,6 @@
         </Content>
     </ItemGroup>
     <ItemGroup>
-      <ProjectReference Include="..\Hreidmar.Library\Hreidmar.Library.csproj" />
+      <ProjectReference Include="..\Hreidmar.Enigma\Hreidmar.Enigma.csproj" />
     </ItemGroup>
 </Project>

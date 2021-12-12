@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hreidmar.Library", "Hreidmar.Library\Hreidmar.Library.csproj", "{8E387025-7535-4780-B39D-CEEC25DD8B8C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hreidmar.Enigma", "Hreidmar.Enigma\Hreidmar.Enigma.csproj", "{8E387025-7535-4780-B39D-CEEC25DD8B8C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hreidmar.Application", "Hreidmar.Application\Hreidmar.Application.csproj", "{16C6A982-6683-4A33-901C-BBEB3C5FDAEF}"
 EndProject
