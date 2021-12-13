@@ -63,7 +63,7 @@ namespace Hreidmar.Enigma
         public static readonly int[] SamsungPids = { 0x6601, 0x685D, 0x68C3 };
         // LibUsb stuff
         private readonly MonoUsbSessionHandle _sessionHandle = new();
-        private readonly MonoUsbDeviceHandle _deviceHandle;
+        private MonoUsbDeviceHandle _deviceHandle;
         // USB connection stuff
         private int _alternateId = 0xFF;
         private int _interfaceId = 0xFF;
@@ -88,36 +88,6 @@ namespace Hreidmar.Enigma
         public Action<string> LogFunction;
 
         /// <summary>
-        /// Find a samsung device and initialize it
-        /// </summary>
-        /// <param name="options">Options</param>
-        /// <param name="log">Logging</param>
-        /// <exception cref="DeviceNotFoundException">No device was found</exception>
-        public DeviceSession(OptionsClass options, Action<string> log)
-        {
-            LogFunction = log;
-            _options = options;
-
-            UsbRegistry found = null;
-            foreach (UsbRegistry device in UsbDevice.AllDevices) {
-                if (device.Vid != SamsungKVid || !SamsungPids.Contains(device.Pid)) continue;
-                LogFunction($"Found device: {device.Vid}/{device.Pid}");
-                found = device;
-            }
-            
-            if (found == null) throw new DeviceNotFoundException("No Samsung devices were found!");
-            LogFunction($"Selected device: {found.Vid}/{found.Pid}");
-            if (UsbDevice.LastErrorString.Contains("Access denied", StringComparison.CurrentCultureIgnoreCase))
-                throw new Exception("Access denied!");
-            try {
-                var mono = (MonoUsbDevice) found.Device;
-                _deviceHandle = mono.Profile.OpenDeviceHandle();
-            } catch { /* Ignore */ }
-            _device = found.Device;
-            Initialize();
-        }
-
-        /// <summary>
         /// Initialize an USB device
         /// </summary>
         /// <param name="device">USB device</param>
@@ -127,13 +97,8 @@ namespace Hreidmar.Enigma
         {
             LogFunction = log;
             _options = options;
-            
-            if (UsbDevice.LastErrorString.Contains("Access denied", StringComparison.CurrentCultureIgnoreCase))
-                throw new Exception("Access denied!");
-            try {
-                var mono = (MonoUsbDevice) device.Device;
-                _deviceHandle = mono.Profile.OpenDeviceHandle();
-            } catch { /* Ignore */ }
+
+            LogFunction($"Last error: {UsbDevice.LastErrorNumber} {UsbDevice.LastErrorString}");
             _device = device.Device;
             _registry = device;
             Initialize();
@@ -163,13 +128,12 @@ namespace Hreidmar.Enigma
             void CheckForErrors() {
                 if (_error == 0) return;
                 var error = _error;
-                Dispose();
-                throw new Exception($"{error}");
+                Dispose(); throw new Exception($"{error}");
             }
 
-            if (_device?.Info == null)
-                throw new Exception("Unable to get device's information!");
-            
+            if (!_device.Open())
+                throw new Exception($"Unable to open device: {UsbDevice.LastErrorNumber} {UsbDevice.LastErrorString}");
+
             LogFunction($"Driver mode: {_device.DriverMode}");
             LogFunction($"Product: {_device.Info.ProductString}");
             bool found = false;
@@ -202,7 +166,10 @@ namespace Hreidmar.Enigma
             
             if (!found)
                 throw new DeviceConnectionFailedException("No valid interfaces found!");
-            if (_deviceHandle != null && _sessionHandle.IsInvalid && _deviceHandle.IsInvalid) {
+            if (_device is MonoUsbDevice mono && !_sessionHandle.IsInvalid) {
+                _deviceHandle = mono.Profile.OpenDeviceHandle();
+                if (_deviceHandle.IsInvalid)
+                    throw new Exception("Handle is invalid!");
                 _error = MonoUsbApi.SetConfiguration(_deviceHandle, _device.Configs[0].Descriptor.ConfigID); CheckForErrors();
                 _error = MonoUsbApi.ClaimInterface(_deviceHandle, _interfaceId); CheckForErrors();
                 _error = MonoUsbApi.SetInterfaceAltSetting(_deviceHandle, _interfaceId, _alternateId); CheckForErrors();
