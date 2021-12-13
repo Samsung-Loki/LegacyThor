@@ -12,6 +12,7 @@ namespace Hreidmar.Enigma.Packets.Inbound
 
         public void Unpack(byte[] buf)
         {
+            File.WriteAllBytes("test.bin", buf);
             var str = Encoding.ASCII.GetString(buf);
             var data = str.Substring(2, str.LastIndexOf("@#", StringComparison.Ordinal) - 2);
             foreach (var pair in data.Split(';'))
