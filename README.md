@@ -7,6 +7,11 @@
 Hreidmar is an alternative to well-known [Heimdall](https://github.com/Benjamin-Dobell/Heimdall). \
 Written purely in C#. Uses [LibUsbDotNet](https://github.com/LibUsbDotNet/LibUsbDotNet) for communication.
 
+## OSS Licence
+![Logo](https://user-images.githubusercontent.com/68467762/146779502-d541591b-2b63-45db-b1af-6b0434753418.png)
+We use a free OSS licence from JetBrains to develop Hreidmar. \
+You can apply to get one [here](https://jb.gg/OpenSourceSupport)
+
 ## Lack of motivation
 Development will be probably suspended for a week or two.
 
