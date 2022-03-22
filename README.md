@@ -11,9 +11,6 @@ Written purely in C#. Uses [LibUsbDotNet](https://github.com/LibUsbDotNet/LibUsb
 We use a free OSS licence from JetBrains to develop Hreidmar. \
 You can apply to get one [here](https://jb.gg/OpenSourceSupport)
 
-## Lack of motivation
-Development will be probably suspended for a week or two.
-
 ## FAQ
 Q: A fatal error occurred. The required library *something* could not be found. \
 A: Look at this issue: [Link](https://github.com/Samsung-Loki/Hreidmar/issues/5)
