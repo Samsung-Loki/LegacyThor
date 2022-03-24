@@ -14,25 +14,38 @@ namespace Hreidmar.Enigma.PIT
         }
         
         public enum DeviceTypeEnum {
-            NAND = 0,
-            File = 1,
-            MMC = 2,
-            All = 3,
+            NAND = 1,
+            EMMC = 2,
+            SPI = 3,
+            IDE = 4,
+            NANDX16 = 5,
+            NOR = 6,
+            NANDWB1 = 7,
+            UFS = 8,
             Unknown
         }
         
         [Flags]
         public enum AttributeEnum {
-            FOTA = 0x0001,
-            Secure = 0x0010
+            ReadOnly = 0,
+            ReadWrite = 1,
+            STL = 3
+        }
+        
+        [Flags]
+        public enum UpdateAttributeEnum {
+            None = 0,
+            Fota = 1,
+            Secure = 2,
+            FotaSecure = 3
         }
 
         public BinaryTypeEnum BinaryType;
         public DeviceTypeEnum DeviceType;
         public AttributeEnum Attributes;
-        public AttributeEnum UpdateAttributes;
+        public UpdateAttributeEnum UpdateAttributes;
         public int Identifier;
-        public int BlockSizeOrOffset;
+        public int BlockSize;
         public int BlockCount;
         public int FileOffset;
         public int FileSize;
