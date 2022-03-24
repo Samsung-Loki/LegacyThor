@@ -15,7 +15,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 5.0.x
+        dotnet-version: 6.0.x
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
@@ -46,7 +46,7 @@ jobs:
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore
-    - name: Upload Syndical.Application binary
+    - name: Upload Hreidmar.GUI binary
       uses: actions/upload-artifact@v2.2.4
       with:
         name: "Hreidmar.GUI-windows"
@@ -68,7 +68,7 @@ jobs:
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore
-    - name: Upload Syndical.Application binary
+    - name: Upload Hreidmar.GUI binary
       uses: actions/upload-artifact@v2.2.4
       with:
         name: "Hreidmar.GUI-macos"
