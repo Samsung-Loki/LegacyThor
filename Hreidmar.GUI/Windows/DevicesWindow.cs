@@ -94,8 +94,7 @@ namespace Hreidmar.GUI.Windows
                 } catch { /* Ignore */ }
                 if (ImGui.Button("Connect")) {
                     try {
-                        Session = new DeviceSession(CurrentDevice, WindowsManager.GetWindow<OptionsWindow>("options").Options,
-                            str => { WindowsManager.GetWindow<LogsWindow>("logs").Log(str); });
+                        // TODO: Connect
                     } catch (Exception e) {
                         WindowsManager.GetWindow<LogsWindow>("logs").Log($"Unable to connect: {e}");
                         WindowsManager.GetWindow<LogsWindow>("logs").Log($"Last error: {UsbDevice.LastErrorNumber} {UsbDevice.LastErrorString}");

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
-        <TargetFramework>net5.0</TargetFramework>
+        <TargetFramework>net6.0</TargetFramework>
         <PublishReadyToRun>false</PublishReadyToRun>
         <TieredCompilation>false</TieredCompilation>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -26,7 +26,7 @@
         <TrimmerRootAssembly Include="Microsoft.Xna.Framework.Content.ContentTypeReader" Visible="false" />
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="ImGui.NET" Version="1.78.0" />
+        <PackageReference Include="ImGui.NET" Version="1.87.3" />
         <PackageReference Include="K4os.Compression.LZ4" Version="1.2.16" />
         <PackageReference Include="K4os.Compression.LZ4.Streams" Version="1.2.16" />
         <PackageReference Include="LibUsbDotNet" Version="2.2.29" />

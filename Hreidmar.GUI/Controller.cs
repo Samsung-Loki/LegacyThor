@@ -1,23 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using Hreidmar.GUI.Windows;
-using Hreidmar.Enigma;
-using Hreidmar.Enigma.Packets;
-using Hreidmar.Enigma.Packets.Inbound;
-using Hreidmar.Enigma.PIT;
+﻿using Hreidmar.GUI.Windows;
 using ImGuiNET;
-using K4os.Compression.LZ4.Streams;
-using LibUsbDotNet;
-using LibUsbDotNet.DeviceNotify.Info;
-using LibUsbDotNet.DeviceNotify.Linux;
-using LibUsbDotNet.Main;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Nez.ImGuiTools;
 using Num = System.Numerics;
 
 #pragma warning disable IDE0052 // Remove unread private members
@@ -64,16 +47,8 @@ namespace Hreidmar.GUI
             WindowsManager.Add("faq", new FaqWindow());
             WindowsManager.Add("help", new HelpWindow());
             WindowsManager.Add("logs", new LogsWindow());
-            WindowsManager.Add("options", new OptionsWindow());
             WindowsManager.Add("devices", new DevicesWindow());
-            WindowsManager.Add("deviceinfo", new DeviceInfoWindow());
-            WindowsManager.Add("flashselect", new FileFlashSelectWindow());
-            WindowsManager.Add("loadselect", new PitLoadSelectWindow());
-            WindowsManager.Add("pitselect", new PitFlashSelectWindow());
-            WindowsManager.Add("file", new FileFlashingWindow());
-            WindowsManager.Add("session", new SessionWindow());
-            WindowsManager.Add("pit", new PitWindow());
-            WindowsManager.Add("69", new PornWindow());
+            WindowsManager.Add("lol", new PornWindow());
             
             // Automatic refresh
             _timer.Interval = 100;
