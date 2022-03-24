@@ -19,8 +19,9 @@ namespace Hreidmar.Enigma.PIT
         /// <summary>
         /// PIT partition entries
         /// </summary>
+        // ReSharper disable once FieldCanBeMadeReadOnly.Global
         // ReSharper disable once CollectionNeverQueried.Global
-        public readonly List<PitEntry> Entries = new();
+        public List<PitEntry> Entries = new();
         
         /// <summary>
         /// Original file's content

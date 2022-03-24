@@ -3,16 +3,22 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+using System.Collections.Generic;
 using System.IO;
 using Hreidmar.Enigma.Exceptions;
 
-namespace Hreidmar.Enigma.Receivers.Interfaces;
+namespace Hreidmar.Enigma.Receivers;
 
 /// <summary>
-/// Byte Ack
+/// A basic command.
 /// </summary>
-public abstract class ByteAck : IReceiver
+public class BasicCmd : IReceiver
 {
+    /// <summary>
+    /// Arguments received
+    /// </summary>
+    public readonly List<int> Arguments = new();
+    
     /// <summary>
     /// Receive byte buffer
     /// </summary>
@@ -26,10 +32,8 @@ public abstract class ByteAck : IReceiver
             throw new UnexpectedValueException(
                 $"Received 0x{value1:X4}, expected 0x{_expectedValue:X4}");
 
-        var value2 = reader.ReadInt32();
-        if (value2 != 0)
-            throw new UnexpectedValueException(
-                $"Received 0x{value1:X4}, expected zero!");
+        while (memory.Position != memory.Length - 1)
+            Arguments.Add(reader.ReadInt32());
     }
 
     /// <summary>
@@ -41,6 +45,6 @@ public abstract class ByteAck : IReceiver
     /// Byte Ack
     /// </summary>
     /// <param name="packetType">Packet Type</param>
-    public ByteAck(int packetType)
+    public BasicCmd(int packetType)
         => _expectedValue = packetType;
 }

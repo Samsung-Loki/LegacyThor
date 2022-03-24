@@ -6,7 +6,7 @@
 using System.Text;
 using Hreidmar.Enigma.Exceptions;
 
-namespace Hreidmar.Enigma.Receivers.Interfaces;
+namespace Hreidmar.Enigma.Receivers;
 
 public abstract class StringAck : IReceiver
 {

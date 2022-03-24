@@ -5,7 +5,7 @@
 
 using System.Text;
 
-namespace Hreidmar.Enigma.Senders.Interfaces;
+namespace Hreidmar.Enigma.Senders;
 
 public abstract class StringSender : ISender
 {

@@ -18,7 +18,8 @@ public class DevInfo
     /// <summary>
     /// DevInfo items
     /// </summary>
-    public List<Item> Items = new();
+    // ReSharper disable once CollectionNeverQueried.Global
+    public readonly List<Item> Items = new();
 
     /// <summary>
     /// Original file's content
