@@ -3,12 +3,16 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-namespace Hreidmar.Application
+namespace Hreidmar.Enigma.Senders.Interfaces;
+
+/// <summary>
+/// Transmitter sender
+/// </summary>
+public interface ISender
 {
-    public static class Program
-    {
-        public static void Main(string[] args) {
-            // TODO: Rework the CLI
-        }
-    }
+    /// <summary>
+    /// Send a byte buffer
+    /// </summary>
+    /// <returns>Byte buffer</returns>
+    public byte[] Send();
 }

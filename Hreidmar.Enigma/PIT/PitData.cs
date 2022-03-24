@@ -1,3 +1,8 @@
+// Copyright © TheAirBlow 2022 <theairblow.help@gmail.com>
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -53,11 +58,11 @@ namespace Hreidmar.Enigma.PIT
         {
             var data = new PitData();
             using var reader = new BinaryReader(stream);
+            data.OriginalFile = reader.ReadBytes((int)stream.Length);
+            stream.Seek(0, SeekOrigin.Begin);
             if (reader.ReadInt32() != 0x12349876)
                 throw new InvalidPitFileException("Invalid file identifier!");
             var count = reader.ReadInt32();
-            data.OriginalFile = reader.ReadBytes((int)stream.Length);
-            stream.Seek(0, SeekOrigin.Begin);
             reader.BaseStream.Seek(4 * 8, SeekOrigin.Current);
             for (int i = 0; i < count; i++)
             {

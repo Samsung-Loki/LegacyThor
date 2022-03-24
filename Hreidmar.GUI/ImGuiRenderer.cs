@@ -1,45 +1,39 @@
-﻿using System;
+﻿// Copyright © TheAirBlow 2022 <theairblow.help@gmail.com>
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using ImGuiNET;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-
-#pragma warning disable IDE0044 // Add readonly modifier
+#pragma warning disable CS0618
 namespace Hreidmar.GUI
 {
     /// <summary>
     /// ImGui renderer for use with XNA-likes (FNA & MonoGame)
     /// </summary>
-    public class ImGuiRenderer
+    public sealed class ImGuiRenderer
     {
         private Game _game;
-
-        // Graphics
-        private GraphicsDevice _graphicsDevice;
-
+        
+        private readonly GraphicsDevice _graphicsDevice;
         private BasicEffect _effect;
-        private RasterizerState _rasterizerState;
-
+        private readonly RasterizerState _rasterizerState;
         private byte[] _vertexData;
         private VertexBuffer _vertexBuffer;
         private int _vertexBufferSize;
-
         private byte[] _indexData;
         private IndexBuffer _indexBuffer;
         private int _indexBufferSize;
-
-        // Textures
-        private Dictionary<IntPtr, Texture2D> _loadedTextures;
-
+        private readonly Dictionary<IntPtr, Texture2D> _loadedTextures;
         private int _textureId;
         private IntPtr? _fontTextureId;
-
-        // Input
         private int _scrollWheelValue;
-
-        private List<int> _keys = new();
+        private readonly List<int> _keys = new();
 
         public ImGuiRenderer(Game game)
         {
@@ -51,8 +45,7 @@ namespace Hreidmar.GUI
 
             _loadedTextures = new Dictionary<IntPtr, Texture2D>();
 
-            _rasterizerState = new RasterizerState()
-            {
+            _rasterizerState = new RasterizerState {
                 CullMode = CullMode.None,
                 DepthBias = 0,
                 FillMode = FillMode.Solid,
@@ -69,15 +62,15 @@ namespace Hreidmar.GUI
         /// <summary>
         /// Creates a texture and loads the font data from ImGui. Should be called when the <see cref="GraphicsDevice" /> is initialized but before any rendering is done
         /// </summary>
-        public virtual unsafe void RebuildFontAtlas()
+        public unsafe void RebuildFontAtlas()
         {
             // Get font texture from ImGui
             var io = ImGui.GetIO();
-            io.Fonts.GetTexDataAsRGBA32(out byte* pixelData, out int width, out int height, out int bytesPerPixel);
+            io.Fonts.GetTexDataAsRGBA32(out byte* pixelData, out var width, out var height, out var bytesPerPixel);
 
             // Copy the data to a managed array
             var pixels = new byte[width * height * bytesPerPixel];
-            unsafe { Marshal.Copy(new IntPtr(pixelData), pixels, 0, pixels.Length); }
+            Marshal.Copy(new IntPtr(pixelData), pixels, 0, pixels.Length);
 
             // Create and register the texture as an XNA texture
             var tex2d = new Texture2D(_graphicsDevice, width, height, false, SurfaceFormat.Color);
@@ -97,43 +90,35 @@ namespace Hreidmar.GUI
         /// <summary>
         /// Creates a pointer to a texture, which can be passed through ImGui calls such as <see cref="ImGui.Image" />. That pointer is then used by ImGui to let us know what texture to draw
         /// </summary>
-        public virtual IntPtr BindTexture(Texture2D texture)
+        public IntPtr BindTexture(Texture2D texture)
         {
             var id = new IntPtr(_textureId++);
-
             _loadedTextures.Add(id, texture);
-
             return id;
         }
 
         /// <summary>
         /// Removes a previously created texture pointer, releasing its reference and allowing it to be deallocated
         /// </summary>
-        public virtual void UnbindTexture(IntPtr textureId)
-        {
-            _loadedTextures.Remove(textureId);
-        }
+        public void UnbindTexture(IntPtr textureId) 
+            => _loadedTextures.Remove(textureId);
 
         /// <summary>
         /// Sets up ImGui for a new frame, should be called at frame start
         /// </summary>
-        public virtual void BeforeLayout(GameTime gameTime)
+        public void BeforeLayout(GameTime gameTime)
         {
             ImGui.GetIO().DeltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-            UpdateInput();
-
-            ImGui.NewFrame();
+            UpdateInput(); ImGui.NewFrame();
         }
 
         /// <summary>
         /// Asks ImGui for the generated geometry data and sends it to the graphics pipeline, should be called after the UI is drawn using ImGui.** calls
         /// </summary>
-        public virtual void AfterLayout()
+        public void AfterLayout()
         {
             ImGui.Render();
-
-            unsafe { RenderDrawData(ImGui.GetDrawData()); }
+            RenderDrawData(ImGui.GetDrawData());
         }
 
         #endregion ImGuiRenderer
@@ -143,7 +128,7 @@ namespace Hreidmar.GUI
         /// <summary>
         /// Maps ImGui keys to XNA keys. We use this later on to tell ImGui what keys were pressed
         /// </summary>
-        protected virtual void SetupInput()
+        private void SetupInput()
         {
             var io = ImGui.GetIO();
 
@@ -167,24 +152,11 @@ namespace Hreidmar.GUI
             _keys.Add(io.KeyMap[(int)ImGuiKey.X] = (int)Keys.X);
             _keys.Add(io.KeyMap[(int)ImGuiKey.Y] = (int)Keys.Y);
             _keys.Add(io.KeyMap[(int)ImGuiKey.Z] = (int)Keys.Z);
-
-            // MonoGame-specific //////////////////////
-            _game.Window.TextInput += (s, a) =>
-            {
+            
+            _game.Window.TextInput += (s, a) => {
                 if (a.Character == '\t') return;
-
                 io.AddInputCharacter(a.Character);
             };
-            ///////////////////////////////////////////
-
-            // FNA-specific ///////////////////////////
-            //TextInputEXT.TextInput += c =>
-            //{
-            //    if (c == '\t') return;
-
-            //    ImGui.GetIO().AddInputCharacter(c);
-            //};
-            ///////////////////////////////////////////
 
             ImGui.GetIO().Fonts.AddFontDefault();
         }
@@ -192,7 +164,7 @@ namespace Hreidmar.GUI
         /// <summary>
         /// Updates the <see cref="Effect" /> to the current matrices and texture
         /// </summary>
-        protected virtual Effect UpdateEffect(Texture2D texture)
+        private Effect UpdateEffect(Texture2D texture)
         {
             _effect ??= new BasicEffect(_graphicsDevice);
 
@@ -200,7 +172,9 @@ namespace Hreidmar.GUI
 
             _effect.World = Matrix.Identity;
             _effect.View = Matrix.Identity;
-            _effect.Projection = Matrix.CreateOrthographicOffCenter(0f, io.DisplaySize.X, io.DisplaySize.Y, 0f, -1f, 1f);
+            _effect.Projection = Matrix.CreateOrthographicOffCenter(
+                0f, io.DisplaySize.X, io.DisplaySize.Y,
+                0f, -1f, 1f);
             _effect.TextureEnabled = true;
             _effect.Texture = texture;
             _effect.VertexColorEnabled = true;
@@ -211,24 +185,24 @@ namespace Hreidmar.GUI
         /// <summary>
         /// Sends XNA input state to ImGui
         /// </summary>
-        protected virtual void UpdateInput()
+        private void UpdateInput()
         {
             var io = ImGui.GetIO();
 
             var mouse = Mouse.GetState();
             var keyboard = Keyboard.GetState();
 
-            for (int i = 0; i < _keys.Count; i++)
-            {
-                io.KeysDown[_keys[i]] = keyboard.IsKeyDown((Keys)_keys[i]);
-            }
+            foreach (var t in _keys)
+                io.KeysDown[t] = keyboard.IsKeyDown((Keys)t);
 
             io.KeyShift = keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift);
             io.KeyCtrl = keyboard.IsKeyDown(Keys.LeftControl) || keyboard.IsKeyDown(Keys.RightControl);
             io.KeyAlt = keyboard.IsKeyDown(Keys.LeftAlt) || keyboard.IsKeyDown(Keys.RightAlt);
             io.KeySuper = keyboard.IsKeyDown(Keys.LeftWindows) || keyboard.IsKeyDown(Keys.RightWindows);
 
-            io.DisplaySize = new System.Numerics.Vector2(_graphicsDevice.PresentationParameters.BackBufferWidth, _graphicsDevice.PresentationParameters.BackBufferHeight);
+            io.DisplaySize = new System.Numerics.Vector2(
+                _graphicsDevice.PresentationParameters.BackBufferWidth, 
+                _graphicsDevice.PresentationParameters.BackBufferHeight);
             io.DisplayFramebufferScale = new System.Numerics.Vector2(1f, 1f);
 
             io.MousePos = new System.Numerics.Vector2(mouse.X, mouse.Y);
@@ -264,10 +238,11 @@ namespace Hreidmar.GUI
             drawData.ScaleClipRects(ImGui.GetIO().DisplayFramebufferScale);
 
             // Setup projection
-            _graphicsDevice.Viewport = new Viewport(0, 0, _graphicsDevice.PresentationParameters.BackBufferWidth, _graphicsDevice.PresentationParameters.BackBufferHeight);
+            _graphicsDevice.Viewport = new Viewport(0, 0, 
+                _graphicsDevice.PresentationParameters.BackBufferWidth, 
+                _graphicsDevice.PresentationParameters.BackBufferHeight);
 
             UpdateBuffers(drawData);
-
             RenderCommandLists(drawData);
 
             // Restore modified state
@@ -278,42 +253,42 @@ namespace Hreidmar.GUI
         private unsafe void UpdateBuffers(ImDrawDataPtr drawData)
         {
             if (drawData.TotalVtxCount == 0)
-            {
                 return;
-            }
 
             // Expand buffers if we need more room
-            if (drawData.TotalVtxCount > _vertexBufferSize)
-            {
+            if (drawData.TotalVtxCount > _vertexBufferSize) {
                 _vertexBuffer?.Dispose();
-
                 _vertexBufferSize = (int)(drawData.TotalVtxCount * 1.5f);
-                _vertexBuffer = new VertexBuffer(_graphicsDevice, DrawVertDeclaration.Declaration, _vertexBufferSize, BufferUsage.None);
+                _vertexBuffer = new VertexBuffer(_graphicsDevice, 
+                    DrawVertDeclaration.Declaration, _vertexBufferSize, 
+                    BufferUsage.None);
                 _vertexData = new byte[_vertexBufferSize * DrawVertDeclaration.Size];
             }
 
-            if (drawData.TotalIdxCount > _indexBufferSize)
-            {
+            if (drawData.TotalIdxCount > _indexBufferSize) {
                 _indexBuffer?.Dispose();
-
                 _indexBufferSize = (int)(drawData.TotalIdxCount * 1.5f);
-                _indexBuffer = new IndexBuffer(_graphicsDevice, IndexElementSize.SixteenBits, _indexBufferSize, BufferUsage.None);
+                _indexBuffer = new IndexBuffer(_graphicsDevice, 
+                    IndexElementSize.SixteenBits, _indexBufferSize, 
+                    BufferUsage.None);
                 _indexData = new byte[_indexBufferSize * sizeof(ushort)];
             }
 
             // Copy ImGui's vertices and indices to a set of managed byte arrays
-            int vtxOffset = 0;
-            int idxOffset = 0;
+            var vtxOffset = 0;
+            var idxOffset = 0;
 
-            for (int n = 0; n < drawData.CmdListsCount; n++)
-            {
-                ImDrawListPtr cmdList = drawData.CmdListsRange[n];
+            for (var n = 0; n < drawData.CmdListsCount; n++) {
+                var cmdList = drawData.CmdListsRange[n];
 
                 fixed (void* vtxDstPtr = &_vertexData[vtxOffset * DrawVertDeclaration.Size])
-                fixed (void* idxDstPtr = &_indexData[idxOffset * sizeof(ushort)])
-                {
-                    Buffer.MemoryCopy((void*)cmdList.VtxBuffer.Data, vtxDstPtr, _vertexData.Length, cmdList.VtxBuffer.Size * DrawVertDeclaration.Size);
-                    Buffer.MemoryCopy((void*)cmdList.IdxBuffer.Data, idxDstPtr, _indexData.Length, cmdList.IdxBuffer.Size * sizeof(ushort));
+                fixed (void* idxDstPtr = &_indexData[idxOffset * sizeof(ushort)]) {
+                    Buffer.MemoryCopy((void*)cmdList.VtxBuffer.Data, vtxDstPtr, 
+                        _vertexData.Length, cmdList.VtxBuffer.Size 
+                                            * DrawVertDeclaration.Size);
+                    Buffer.MemoryCopy((void*)cmdList.IdxBuffer.Data, idxDstPtr, 
+                        _indexData.Length, cmdList.IdxBuffer.Size 
+                                           * sizeof(ushort));
                 }
 
                 vtxOffset += cmdList.VtxBuffer.Size;
@@ -325,50 +300,38 @@ namespace Hreidmar.GUI
             _indexBuffer.SetData(_indexData, 0, drawData.TotalIdxCount * sizeof(ushort));
         }
 
-        private unsafe void RenderCommandLists(ImDrawDataPtr drawData)
+        private void RenderCommandLists(ImDrawDataPtr drawData)
         {
             _graphicsDevice.SetVertexBuffer(_vertexBuffer);
             _graphicsDevice.Indices = _indexBuffer;
 
-            int vtxOffset = 0;
-            int idxOffset = 0;
+            var vtxOffset = 0;
+            var idxOffset = 0;
 
-            for (int n = 0; n < drawData.CmdListsCount; n++)
-            {
-                ImDrawListPtr cmdList = drawData.CmdListsRange[n];
+            for (var n = 0; n < drawData.CmdListsCount; n++) {
+                var cmdList = drawData.CmdListsRange[n];
 
-                for (int cmdi = 0; cmdi < cmdList.CmdBuffer.Size; cmdi++)
-                {
-                    ImDrawCmdPtr drawCmd = cmdList.CmdBuffer[cmdi];
+                for (var cmdi = 0; cmdi < cmdList.CmdBuffer.Size; cmdi++) {
+                    var drawCmd = cmdList.CmdBuffer[cmdi];
 
                     if (!_loadedTextures.ContainsKey(drawCmd.TextureId))
-                    {
                         throw new InvalidOperationException($"Could not find a texture with id '{drawCmd.TextureId}', please check your bindings");
-                    }
 
                     _graphicsDevice.ScissorRectangle = new Rectangle(
-                        (int)drawCmd.ClipRect.X,
-                        (int)drawCmd.ClipRect.Y,
+                        (int)drawCmd.ClipRect.X, (int)drawCmd.ClipRect.Y,
                         (int)(drawCmd.ClipRect.Z - drawCmd.ClipRect.X),
                         (int)(drawCmd.ClipRect.W - drawCmd.ClipRect.Y)
                     );
 
                     var effect = UpdateEffect(_loadedTextures[drawCmd.TextureId]);
-
-                    foreach (var pass in effect.CurrentTechnique.Passes)
-                    {
+                    foreach (var pass in effect.CurrentTechnique.Passes) {
                         pass.Apply();
-
-#pragma warning disable CS0618 // // FNA does not expose an alternative method.
+                        
                         _graphicsDevice.DrawIndexedPrimitives(
-                            primitiveType: PrimitiveType.TriangleList,
-                            baseVertex: vtxOffset,
-                            minVertexIndex: 0,
-                            numVertices: cmdList.VtxBuffer.Size,
-                            startIndex: idxOffset,
-                            primitiveCount: (int)drawCmd.ElemCount / 3
+                            PrimitiveType.TriangleList, vtxOffset,
+                            0, cmdList.VtxBuffer.Size,
+                            idxOffset, (int) drawCmd.ElemCount / 3
                         );
-#pragma warning restore CS0618
                     }
 
                     idxOffset += (int)drawCmd.ElemCount;
@@ -381,4 +344,3 @@ namespace Hreidmar.GUI
         #endregion Internals
     }
 }
-#pragma warning restore IDE0044 // Add readonly modifier

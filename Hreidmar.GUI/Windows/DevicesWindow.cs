@@ -1,5 +1,11 @@
+// Copyright © TheAirBlow 2022 <theairblow.help@gmail.com>
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Numerics;
 using Hreidmar.Enigma;
@@ -14,7 +20,7 @@ namespace Hreidmar.GUI.Windows
         /// <summary>
         /// Last devices count
         /// </summary>
-        private int _lastCount;
+        private int _lastCount = -1;
 
         /// <summary>
         /// Refresh devices
@@ -88,17 +94,13 @@ namespace Hreidmar.GUI.Windows
             if (ImGui.Begin("Device", ImGuiWindowFlags.AlwaysAutoResize)) {
                 ImGui.Combo("Select device", ref _currentDeviceIndex, _devicesNames.ToArray(), _devicesNames.Count);
                 try {
-                    if (CurrentDevice.Vid != DeviceSession.SamsungKVid || !DeviceSession
-                        .SamsungPids.ToList().Contains(CurrentDevice.Pid)) 
+                    if (CurrentDevice.Vid != DeviceSession.SamsungKVid 
+                        || !DeviceSession.SamsungPids.Contains(CurrentDevice.Pid)) 
                         ImGui.Text("This device is not a Hreidmar-compatible download mode Samsung device!");
                 } catch { /* Ignore */ }
+                
                 if (ImGui.Button("Connect")) {
-                    try {
-                        // TODO: Connect
-                    } catch (Exception e) {
-                        WindowsManager.GetWindow<LogsWindow>("logs").Log($"Unable to connect: {e}");
-                        WindowsManager.GetWindow<LogsWindow>("logs").Log($"Last error: {UsbDevice.LastErrorNumber} {UsbDevice.LastErrorString}");
-                    }
+                    // TODO: Connect
                 }
                 ImGui.End();
             }
