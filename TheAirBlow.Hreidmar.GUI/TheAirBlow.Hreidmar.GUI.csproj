@@ -1,0 +1,60 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net6.0</TargetFramework>
+        <PublishReadyToRun>false</PublishReadyToRun>
+        <TieredCompilation>false</TieredCompilation>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <LangVersion>latest</LangVersion>
+    </PropertyGroup>
+    <PropertyGroup>
+        <ApplicationManifest>app.manifest</ApplicationManifest>
+        <ApplicationIcon>Icon.ico</ApplicationIcon>
+    </PropertyGroup>
+    <ItemGroup>
+        <None Remove="Icon.ico" />
+        <None Remove="Icon.bmp" />
+    </ItemGroup>
+    <ItemGroup>
+        <EmbeddedResource Include="Icon.ico" />
+        <EmbeddedResource Include="Icon.bmp" />
+    </ItemGroup>
+    <ItemGroup>
+        <MonoGameContentReference Include="Content\Content.mgcb" />
+    </ItemGroup>
+    <ItemGroup>
+        <TrimmerRootAssembly Include="Microsoft.Xna.Framework.Content.ContentTypeReader" Visible="false" />
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="ImGui.NET" Version="1.87.3" />
+        <PackageReference Include="K4os.Compression.LZ4" Version="1.2.16" />
+        <PackageReference Include="K4os.Compression.LZ4.Streams" Version="1.2.16" />
+        <PackageReference Include="LibUsbDotNet" Version="2.2.29" />
+        <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.0.1641" />
+        <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.0.1641" />
+        <PackageReference Include="Serilog" Version="2.10.0" />
+        <PackageReference Include="Serilog.Exceptions" Version="8.1.0" />
+        <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+    </ItemGroup>
+    <ItemGroup>
+        <Content Include="..\deps\cimgui\cimgui.so" Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))'">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <Link>libcimgui.so</Link>
+        </Content>
+        <Content Include="..\deps\cimgui\cimgui.dylib" Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))'">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <Link>cimgui.dylib</Link>
+        </Content>
+        <Content Include="..\deps\cimgui\cimgui.dll" Condition="'$(OS)' == 'Windows_NT'">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <Link>cimgui.dll</Link>
+        </Content>
+        <Content Include="Karla-Regular.ttf">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <Link>Karla-Regular.ttf</Link>
+        </Content>
+    </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\TheAirBlow.Hreidmar.Enigma\TheAirBlow.Hreidmar.Enigma.csproj" />
+    </ItemGroup>
+</Project>
