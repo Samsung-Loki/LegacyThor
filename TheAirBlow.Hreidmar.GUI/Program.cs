@@ -4,18 +4,24 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 using System;
+using Serilog.Core;
 
-namespace TheAirBlow.Hreidmar.GUI
+namespace TheAirBlow.Hreidmar.GUI;
+
+public static class Program
 {
-    public static class Program
+    /// <summary>
+    /// Global SeriLog logger
+    /// </summary>
+    public static Logger Logger;
+        
+    /// <summary>
+    /// Run the Hreidmar renderer
+    /// </summary>
+    [STAThread]
+    public static void Main()
     {
-        
-        
-        [STAThread]
-        public static void Main()
-        {
-            using var game = new MonoGameController();
-            game.Run();
-        }
+        using var game = new MonoGameController();
+        game.Run();
     }
 }

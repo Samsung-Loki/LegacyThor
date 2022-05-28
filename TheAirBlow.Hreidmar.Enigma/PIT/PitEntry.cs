@@ -3,59 +3,70 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-using System;
+namespace TheAirBlow.Hreidmar.Enigma.PIT;
 
-namespace TheAirBlow.Hreidmar.Enigma.PIT
+/// <summary>
+/// PIT partition entry
+/// </summary>
+public class PitEntry
 {
     /// <summary>
-    /// A PIT entry
+    /// Binary Type (AP/CP)
     /// </summary>
-    public class PitEntry
-    {
-        public enum BinaryTypeEnum {
-            AP = 0,
-            CP = 1,
-            Unknown
-        }
-        
-        public enum DeviceTypeEnum {
-            NAND = 1,
-            EMMC = 2,
-            SPI = 3,
-            IDE = 4,
-            NANDX16 = 5,
-            NOR = 6,
-            NANDWB1 = 7,
-            UFS = 8,
-            Unknown
-        }
-        
-        [Flags]
-        public enum AttributeEnum {
-            ReadOnly = 0,
-            ReadWrite = 1,
-            STL = 3
-        }
-        
-        [Flags]
-        public enum UpdateAttributeEnum {
-            None = 0,
-            Fota = 1,
-            Secure = 2,
-            FotaSecure = 3
-        }
+    public BinaryType BinaryType;
+    
+    /// <summary>
+    /// Flash memory type
+    /// </summary>
+    public DeviceType DeviceType;
+    
+    /// <summary>
+    /// Partition identifier
+    /// </summary>
+    public int Identifier;
+    
+    /// <summary>
+    /// Attributes
+    /// </summary>
+    public Attributes Attributes;
+    
+    /// <summary>
+    /// Update (FOTA) attributes
+    /// </summary>
+    public UpdateAttributes UpdateAttributes;
 
-        public BinaryTypeEnum BinaryType;
-        public DeviceTypeEnum DeviceType;
-        public AttributeEnum Attributes;
-        public UpdateAttributeEnum UpdateAttributes;
-        public int Identifier;
-        public int BlockSize;
-        public int BlockCount;
-        public int FileOffset;
-        public int FileSize;
-        public string PartitionName;
-        public string FlashName;
-        public string FotaName;
-    }
+    /// <summary>
+    /// Start block or Block Count
+    /// </summary>
+    public int StartBlockOrCount;
+    
+    /// <summary>
+    /// Count of blocks or Block Number
+    /// </summary>
+    public int BlockCountOrNumber = -1;
+
+    /// <summary>
+    /// File Offset (obsolete)
+    /// </summary>
+    public int FileOffset;
+    
+    /// <summary>
+    /// File Size (obsolete)
+    /// </summary>
+    public int FileSize;
+    
+    /// <summary>
+    /// Partition Name
+    /// </summary>
+    public string Name;
+    
+    /// <summary>
+    /// File Name in firmware
+    /// </summary>
+    public string FileName;
+    
+    /// <summary>
+    /// Delta (FOTA) name, usually used for "remainder"
+    /// </summary>
+    public string DeltaName;
 }

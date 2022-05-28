@@ -5,6 +5,7 @@
         <PublishReadyToRun>false</PublishReadyToRun>
         <TieredCompilation>false</TieredCompilation>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <Nullable>enable</Nullable>
         <LangVersion>latest</LangVersion>
     </PropertyGroup>
     <PropertyGroup>
@@ -32,9 +33,11 @@
         <PackageReference Include="LibUsbDotNet" Version="2.2.29" />
         <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.0.1641" />
         <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.0.1641" />
-        <PackageReference Include="Serilog" Version="2.10.0" />
-        <PackageReference Include="Serilog.Exceptions" Version="8.1.0" />
+        <PackageReference Include="Serilog" Version="2.11.0" />
+        <PackageReference Include="Serilog.Exceptions" Version="8.2.0" />
+        <PackageReference Include="Serilog.Sinks.Console" Version="4.0.1" />
         <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+        <PackageReference Include="Serilog.Sinks.TextWriter" Version="2.1.0" />
     </ItemGroup>
     <ItemGroup>
         <Content Include="..\deps\cimgui\cimgui.so" Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))'">

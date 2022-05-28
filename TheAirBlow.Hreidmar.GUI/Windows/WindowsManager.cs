@@ -6,72 +6,80 @@
 using System;
 using System.Collections.Generic;
 
-namespace TheAirBlow.Hreidmar.GUI.Windows
+namespace TheAirBlow.Hreidmar.GUI.Windows;
+
+/// <summary>
+/// Hreidmar GUI windows manager
+/// </summary>
+public static class WindowsManager
 {
     /// <summary>
-    /// Hreidmar GUI windows manager
+    /// All windows
     /// </summary>
-    public static class WindowsManager
+    private static Dictionary<string, Window> _windows = new();
+
+    /// <summary>
+    /// Add a window
+    /// </summary>
+    /// <param name="name">Name</param>
+    /// <param name="window">Window</param>
+    public static void Add(string name, Window window)
+        => _windows.Add(name, window);
+
+    /// <summary>
+    /// Remove a window
+    /// </summary>
+    /// <param name="name">Name</param>
+    public static void Remove(string name)
     {
-        /// <summary>
-        /// All windows
-        /// </summary>
-        private static Dictionary<string, Window> _windows = new();
+        Program.Logger.Information($"Removed window {name}");
+        _windows.Remove(name);
+    }
 
-        /// <summary>
-        /// Add a window
-        /// </summary>
-        /// <param name="name">Name</param>
-        /// <param name="window">Window</param>
-        public static void Add(string name, Window window)
-            => _windows.Add(name, window);
+    /// <summary>
+    /// Open a window
+    /// </summary>
+    /// <param name="name">Name</param>
+    public static void Open(string name)
+    {
+        Program.Logger.Information($"Opened window {name}");
+        _windows[name].Open();
+    }
 
-        /// <summary>
-        /// Remove a window
-        /// </summary>
-        /// <param name="name">Name</param>
-        public static void Remove(string name)
-            => _windows.Remove(name);
-        
-        /// <summary>
-        /// Open a window
-        /// </summary>
-        /// <param name="name">Name</param>
-        public static void Open(string name)
-            => _windows[name].Open();
+    /// <summary>
+    /// Close a window
+    /// </summary>
+    /// <param name="name">Name</param>
+    public static void Close(string name)
+    {
+        Program.Logger.Information($"Closed window {name}");
+        _windows[name].Close();
+    }
 
-        /// <summary>
-        /// Close a window
-        /// </summary>
-        /// <param name="name">Name</param>
-        public static void Close(string name)
-            => _windows[name].Close();
-        
-        /// <summary>
-        /// Is window opened
-        /// </summary>
-        /// <param name="name">name</param>
-        /// <returns>Value</returns>
-        public static bool IsOpened(string name)
-            => _windows[name].IsOpened();
+    /// <summary>
+    /// Is window opened
+    /// </summary>
+    /// <param name="name">name</param>
+    /// <returns>Value</returns>
+    public static bool IsOpened(string name)
+        => _windows[name].IsOpened();
 
-        /// <summary>
-        /// Get a window by name of type
-        /// </summary>
-        /// <param name="name">Name</param>
-        /// <typeparam name="T">Type</typeparam>
-        /// <exception cref="Exception">Requested Window type is not an instance of Window</exception>
-        /// <returns>Window</returns>
-        public static T GetWindow<T>(string name)
-            => (T)(object)_windows[name];
+    /// <summary>
+    /// Get a window by name of type
+    /// </summary>
+    /// <param name="name">Name</param>
+    /// <typeparam name="T">Type</typeparam>
+    /// <exception cref="Exception">Requested Window type is not an instance of Window</exception>
+    /// <returns>Window</returns>
+    public static T GetWindow<T>(string name)
+        => (T)(object)_windows[name];
 
-        /// <summary>
-        /// Draw all windows
-        /// </summary>
-        public static void Draw()
-        {
-            foreach (var window in _windows)
-                if (window.Value.IsOpened()) window.Value.Draw();
-        }
+    /// <summary>
+    /// Draw all windows
+    /// </summary>
+    public static void Draw()
+    {
+        foreach (var window in _windows)
+            if (window.Value.IsOpened()) window.Value.Draw();
     }
 }

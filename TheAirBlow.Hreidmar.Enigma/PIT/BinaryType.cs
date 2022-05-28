@@ -3,10 +3,20 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-using System;
+namespace TheAirBlow.Hreidmar.Enigma.PIT;
 
-namespace TheAirBlow.Hreidmar.Enigma.Exceptions;
-
-public class InvalidPitFileException : Exception {
-    public InvalidPitFileException(string message) : base(message) { }
+/// <summary>
+/// Binary Type
+/// </summary>
+public enum BinaryType
+{
+    /// <summary>
+    /// Phone Binary
+    /// </summary>
+    AP = 0,
+    
+    /// <summary>
+    /// Modem Binary
+    /// </summary>
+    CP = 1
 }

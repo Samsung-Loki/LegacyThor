@@ -5,23 +5,22 @@
 
 using ImGuiNET;
 
-namespace TheAirBlow.Hreidmar.GUI.Windows
+namespace TheAirBlow.Hreidmar.GUI.Windows;
+
+public class HelpWindow : Window
 {
-    public class HelpWindow : Window
+    /// <summary>
+    /// Draw the Help window
+    /// </summary>
+    public override void Draw()
     {
-        /// <summary>
-        /// Draw the Help window
-        /// </summary>
-        public override void Draw()
-        {
-            var opened = true;
-            if (ImGui.Begin("Help", ref opened, ImGuiWindowFlags.AlwaysAutoResize)) {
-                ImGui.Text("Device window:");
-                ImGui.Text("Here is all USB devices detected.");
-                ImGui.Text("Select one of them and hit \"Connect\".");
-                ImGui.End();
-            }
-            if (!opened) Close();
+        var opened = true;
+        if (ImGui.Begin("Help", ref opened, ImGuiWindowFlags.AlwaysAutoResize)) {
+            ImGui.Text("Device window:");
+            ImGui.Text("Here is all USB devices detected.");
+            ImGui.Text("Select one of them and hit \"Connect\".");
+            ImGui.End();
         }
+        if (!opened) Close();
     }
 }

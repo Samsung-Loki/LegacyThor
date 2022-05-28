@@ -5,9 +5,8 @@
 
 using System;
 
-namespace TheAirBlow.Hreidmar.Enigma.Exceptions
-{
-    internal class DeviceConnectionFailedException : Exception {
-        public DeviceConnectionFailedException(string message) : base(message) { }
-    }
+namespace TheAirBlow.Hreidmar.Enigma.Exceptions;
+
+internal class DeviceConnectionFailedException : Exception {
+    public DeviceConnectionFailedException(string message) : base(message) { }
 }
