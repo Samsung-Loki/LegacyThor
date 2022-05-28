@@ -27,7 +27,7 @@ public class PitFile
     /// <summary>
     /// Is it version 2 PIT file?
     /// </summary>
-    public bool IsVersion2 = true;
+    public bool IsVersion2 = false;
 
     /// <summary>
     /// Parse a PIT file from raw byte data
@@ -112,7 +112,7 @@ public class PitFile
             }
 
             if (last != i.StartBlockOrCount) {
-                IsVersion2 = false;
+                IsVersion2 = true;
                 break;
             }
             last = i.StartBlockOrCount;
