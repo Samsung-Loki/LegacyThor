@@ -11,7 +11,7 @@ namespace TheAirBlow.Thor.Enigma.Receivers;
 /// <summary>
 /// Byte Ack
 /// </summary>
-public abstract class ByteAck : IReceiver
+public class ByteAck : IReceiver
 {
     /// <summary>
     /// Receive byte buffer

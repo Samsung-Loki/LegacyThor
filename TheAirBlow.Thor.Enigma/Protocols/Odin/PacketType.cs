@@ -3,30 +3,35 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-namespace TheAirBlow.Thor.Enigma.Odin;
+namespace TheAirBlow.Thor.Enigma.Protocols.Odin;
 
 /// <summary>
-/// SessionEnd Commands
+/// Packet type
 /// </summary>
-public enum SessionEnd
+public enum PacketType
 {
     /// <summary>
-    /// End current session
+    /// Session control
     /// </summary>
-    EndSession = 0x00,
+    SessionStart = 0x64,
     
     /// <summary>
-    /// Reboot the device
+    /// PIT flashing/dumping
     /// </summary>
-    Reboot = 0x01,
+    PitXmit = 0x65,
     
     /// <summary>
-    /// Reboot into ODIN
+    /// File flashing
     /// </summary>
-    OdinReboot = 0x02,
-    
+    FileXmit = 0x66,
+
     /// <summary>
-    /// Shutdown the device
+    /// End session
     /// </summary>
-    Shutdown = 0x03
+    SessionEnd = 0x67,
+ 
+    /// <summary>
+    /// Device Information
+    /// </summary>
+    DeviceInfo = 0x69
 }
