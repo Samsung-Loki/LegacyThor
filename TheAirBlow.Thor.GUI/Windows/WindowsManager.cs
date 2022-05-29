@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using ImGuiNET;
 
 namespace TheAirBlow.Thor.GUI.Windows;
@@ -23,12 +24,7 @@ public static class WindowsManager
     /// <summary>
     /// Popup to show
     /// </summary>
-    private static Action? _popupAction = null;
-    
-    /// <summary>
-    /// Random instance
-    /// </summary>
-    private static readonly Random _random = new Random();
+    private static Action? _popupAction;
 
     /// <summary>
     /// Add a window
@@ -87,28 +83,24 @@ public static class WindowsManager
         => (T)(object)_windows[name];
 
     /// <summary>
-    /// Generate random string
+    /// Show a popup
     /// </summary>
-    /// <param name="length">Length</param>
-    /// <returns>Random string</returns>
-    private static string RandomString(int length)
-    {
-        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        return new string(Enumerable.Repeat(chars, length)
-            .Select(s => s[_random.Next(s.Length)]).ToArray());
-    }
-
+    /// <param name="title">Title</param>
+    /// <param name="message">Message</param>
     public static void ShowPopup(string title, string message)
-        => _popupAction = () =>
-        {
+        => _popupAction = () => {
             var open = true;
+            var io = ImGui.GetIO();
+            ImGui.SetNextWindowPos(new Vector2(io.DisplaySize.X * 0.5f, io.DisplaySize.Y * 0.5f), 
+                ImGuiCond.Always, new Vector2(0.5f, 0.5f));
             if (ImGui.Begin(title, ref open, ImGuiWindowFlags.Popup | ImGuiWindowFlags.AlwaysAutoResize)) {
                 ImGui.Text(message);
                 if (ImGui.Button("OK"))
                     open = false;
+                ImGui.End();
             }
 
-            if (open == false) _popupAction = null;
+            if (!open) _popupAction = null;
         };
 
     /// <summary>

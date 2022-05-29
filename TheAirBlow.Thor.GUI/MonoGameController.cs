@@ -105,9 +105,7 @@ public class MonoGameController : Game
         WindowsManager.Add("about", new AboutWindow());
         WindowsManager.Add("faq", new FaqWindow());
         WindowsManager.Add("help", new HelpWindow());
-        WindowsManager.Add("logs", new LogsWindow());
         WindowsManager.Add("devices", new DevicesWindow());
-        WindowsManager.Add("lol", new PornWindow());
 
         // Automatic refresh
         _timer.Interval = 100;
@@ -117,8 +115,6 @@ public class MonoGameController : Game
             
         // Initialize logger
         Program.Logger = new LoggerConfiguration()
-            .WriteTo.TextWriter(new SerilogLogWindow(),
-                outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
             .WriteTo.File("main.log")
             .WriteTo.Console()
             .CreateLogger();
