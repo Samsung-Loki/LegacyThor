@@ -7,7 +7,7 @@ using System.Text;
 
 namespace TheAirBlow.Thor.Enigma.Senders;
 
-public abstract class StringSender : ISender
+public class StringSender : ISender
 {
     /// <summary>
     /// Send the string

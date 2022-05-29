@@ -51,7 +51,7 @@ public sealed class ImGuiRenderer
             DepthBias = 0,
             FillMode = FillMode.Solid,
             MultiSampleAntiAlias = false,
-            ScissorTestEnable = false,
+            ScissorTestEnable = true,
             SlopeScaleDepthBias = 0
         };
 

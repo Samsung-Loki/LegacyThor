@@ -12,7 +12,7 @@ namespace TheAirBlow.Thor.Enigma.Receivers;
 /// <summary>
 /// A basic command.
 /// </summary>
-public class BasicCmd : IReceiver
+public class BasicCmdReceiver : IReceiver
 {
     /// <summary>
     /// Arguments received
@@ -45,6 +45,6 @@ public class BasicCmd : IReceiver
     /// Byte Ack
     /// </summary>
     /// <param name="packetType">Packet Type</param>
-    public BasicCmd(int packetType)
+    public BasicCmdReceiver(int packetType)
         => _expectedValue = packetType;
 }

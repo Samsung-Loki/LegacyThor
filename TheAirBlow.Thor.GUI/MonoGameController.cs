@@ -149,6 +149,8 @@ public class MonoGameController : Game
         GraphicsDevice.Clear(new Color(33, 199, 197));
         BatchDraw(); base.Draw(gameTime);
         _imGuiRenderer.BeforeLayout(gameTime);
+        ImGui.DockSpaceOverViewport(ImGui.GetMainViewport(), 
+            ImGuiDockNodeFlags.PassthruCentralNode);
         ImGui.PushFont(_font); ImGuiDraw();
         _imGuiRenderer.AfterLayout();
     }

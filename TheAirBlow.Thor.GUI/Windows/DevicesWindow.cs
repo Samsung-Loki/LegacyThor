@@ -61,7 +61,7 @@ public class DevicesWindow : Window
     /// <summary>
     /// Current session
     /// </summary>
-    public DeviceSession Session;
+    public DeviceSession? Session;
 
     /// <summary>
     /// Is the window opened
@@ -90,15 +90,31 @@ public class DevicesWindow : Window
     public override void Draw()
     {
         if (ImGui.Begin("Device", ImGuiWindowFlags.AlwaysAutoResize)) {
-            ImGui.Combo("Select device", ref _currentDeviceIndex, _devicesNames.ToArray(), _devicesNames.Count);
-            try {
-                if (CurrentDevice.Vid != DeviceSession.SamsungKVid 
-                    || !DeviceSession.SamsungPids.Contains(CurrentDevice.Pid)) 
-                    ImGui.Text("This device is not a Hreidmar-compatible download mode Samsung device!");
-            } catch { /* Ignore */ }
+            if (Session == null) {
+                ImGui.Combo("Select device", ref _currentDeviceIndex, _devicesNames.ToArray(), _devicesNames.Count);
+                try {
+                    if (CurrentDevice.Vid != DeviceSession.SamsungKVid 
+                        || !DeviceSession.SamsungPids.Contains(CurrentDevice.Pid)) 
+                        ImGui.Text("This device is not a Hreidmar-compatible download mode Samsung device!");
+                } catch { /* Ignore */ }
                 
-            if (ImGui.Button("Connect")) {
-                Program.Logger.Error("Sorry, connecting is not implemented yet!");
+                if (ImGui.Button("Connect")) {
+                    try {
+                        Session = new DeviceSession(CurrentDevice, Program.Logger);
+                    } catch (Exception e) {
+                        Session = null;
+                        Program.Logger.Error(e, "An exception occured!");
+                        Program.Logger.Error($"Last error: {UsbDevice.LastErrorNumber} {UsbDevice.LastErrorString}");
+                    }
+                }
+            } else {
+                if (ImGui.Button("Disconnect")) {
+                    Program.Logger.Information($"Disconnected from {CurrentDevice.Name} " +
+                                               $"(0x{CurrentDevice.Vid:X4}/0x{CurrentDevice.Pid:X4})!");
+                    Session.Dispose(); Session = null;
+                }
+                ImGui.Text($"Protocol: {Session?.ProtocolType.ToString()}");
+                
             }
             ImGui.End();
         }

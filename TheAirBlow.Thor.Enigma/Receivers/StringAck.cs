@@ -8,7 +8,7 @@ using TheAirBlow.Thor.Enigma.Exceptions;
 
 namespace TheAirBlow.Thor.Enigma.Receivers;
 
-public abstract class StringAck : IReceiver
+public class StringAck : IReceiver
 {
     /// <summary>
     /// Receive the string

@@ -12,6 +12,7 @@ using LibUsbDotNet.Main;
 using MonoLibUsb;
 using Serilog.Core;
 using TheAirBlow.Thor.Enigma.Exceptions;
+using TheAirBlow.Thor.Enigma.Protocols;
 
 namespace TheAirBlow.Thor.Enigma;
 
@@ -49,12 +50,7 @@ public class DeviceSession : IDisposable
     /// USB reader
     /// </summary>
     private UsbEndpointReader _reader;
-        
-    /// <summary>
-    /// USB registry
-    /// </summary>
-    private UsbRegistry _registry;
-        
+
     /// <summary>
     /// Selected USB Device
     /// </summary>
@@ -71,19 +67,31 @@ public class DeviceSession : IDisposable
     private Logger _logger;
 
     /// <summary>
+    /// Detected protocol
+    /// </summary>
+    public Protocol Protocol;
+
+    /// <summary>
+    /// Loke/Odin protocol
+    /// </summary>
+    public enum ProtocolTypeEnum { Loke, Odin }
+
+    /// <summary>
+    /// Protocol type (Loke/Odin)
+    /// </summary>
+    public ProtocolTypeEnum ProtocolType;
+
+    /// <summary>
     /// Initialize an USB device
     /// </summary>
     /// <param name="device">USB device</param>
-    /// <param name="options">Options</param>
-    /// <param name="log">Logging</param>
+    /// <param name="logger">Logging</param>
     public DeviceSession(UsbRegistry device, Logger logger)
     {
         _logger = logger;
         _device = device.Device;
-        _registry = device;
         Initialize();
-        //_logger.Error(e, "An exception occured!");
-        //_logger.Error($"Last error: {UsbDevice.LastErrorNumber} {UsbDevice.LastErrorString}");
+        DetectProtocol();
     }
 
     /// <summary>
@@ -162,6 +170,28 @@ public class DeviceSession : IDisposable
         _writer = _device.OpenEndpointWriter((WriteEndpointID) _writeEndpoint);
         _reader = _device.OpenEndpointReader((ReadEndpointID) _readEndpoint);
         _logger.Information("Initialization done!");
+    }
+
+    /// <summary>
+    /// Detect device's protocol
+    /// </summary>
+    private void DetectProtocol()
+    {
+        // Loke Protocol
+        var protocol = (Protocol) new LokeProtocol(_writer, _reader);
+        if (protocol.Handshake()) {
+            ProtocolType = ProtocolTypeEnum.Loke;
+            Protocol = protocol;
+        }
+        
+        // Odin Protocol
+        protocol = (Protocol) new OdinProtocol(_writer, _reader);
+        if (protocol.Handshake()) {
+            ProtocolType = ProtocolTypeEnum.Odin;
+            Protocol = protocol;
+        }
+
+        throw new UnexpectedErrorException("Unknown bootloader!");
     }
 
     /// <summary>

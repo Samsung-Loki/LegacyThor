@@ -11,7 +11,7 @@ namespace TheAirBlow.Thor.Enigma.Senders;
 /// <summary>
 /// A basic command
 /// </summary>
-public class BasicCmd : ISender
+public class BasicCmdSender : ISender
 {
     public byte[] Send()
         => _buffer;
@@ -23,7 +23,7 @@ public class BasicCmd : ISender
     /// </summary>
     /// <param name="type">Packet Type</param>
     /// <param name="command">Command</param>
-    public BasicCmd(int type, int command)
+    public BasicCmdSender(int type, int command)
     {
         using var memory = new MemoryStream();
         using var binary = new BinaryWriter(memory);
@@ -38,7 +38,7 @@ public class BasicCmd : ISender
     /// <param name="type">Packet Type</param>
     /// <param name="command">Command</param>
     /// <param name="arguments">Int32 Arguments</param
-    public BasicCmd(int type, int command, params int[] arguments)
+    public BasicCmdSender(int type, int command, params int[] arguments)
     {
         using var memory = new MemoryStream();
         using var binary = new BinaryWriter(memory);
@@ -55,7 +55,7 @@ public class BasicCmd : ISender
     /// <param name="type">Packet Type</param>
     /// <param name="command">Command</param>
     /// <param name="argument">String Argument</param
-    public BasicCmd(int type, int command, string argument)
+    public BasicCmdSender(int type, int command, string argument)
     {
         using var memory = new MemoryStream();
         using var binary = new BinaryWriter(memory);

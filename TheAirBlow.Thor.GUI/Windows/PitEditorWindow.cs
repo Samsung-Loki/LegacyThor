@@ -21,7 +21,7 @@ public class PitEditorWindow : Window
     public override void Draw()
     {
         var opened = true;
-        if (ImGui.Begin("PIT Viewer", ref opened, ImGuiWindowFlags.AlwaysVerticalScrollbar)) {
+        if (ImGui.Begin("PIT Viewer", ref opened)) {
             if (ImGui.Button("Open")) {
                 _picker = FilePicker.GetFilePicker("piteditor", Environment.GetFolderPath(
                     Environment.SpecialFolder.Desktop), ".pit");
@@ -49,9 +49,9 @@ public class PitEditorWindow : Window
                     ImGui.TableNextColumn();
                     ImGui.Text(_pit.IsVersion2 ? "File System" : "Update Attributes");
                     ImGui.TableNextColumn();
-                    ImGui.Text(_pit.IsVersion2 ? "Unit Size (kB)" : "Start Block");
+                    ImGui.Text(_pit.IsVersion2 ? "Start Block" : "Unit Size (kB)");
                     ImGui.TableNextColumn();
-                    ImGui.Text(_pit.IsVersion2 ? "Unit Count" : "Block Number");
+                    ImGui.Text(_pit.IsVersion2 ? "Block Number" : "Unit Count");
                     ImGui.TableNextColumn();
                     ImGui.Text("File Offset");
                     ImGui.TableNextColumn();
