@@ -25,6 +25,13 @@ public abstract class Protocol : IDisposable
     private UsbEndpointReader _reader;
 
     /// <summary>
+    /// The empty packets are Qualcomm ZLP.
+    /// They're required after read/write operations
+    /// to prevent DMA deadlock. The more you know.
+    /// </summary>
+    private bool _zlpNeeded = true;
+
+    /// <summary>
     /// Create a new instance of Protocol
     /// </summary>
     /// <param name="writer">Writer</param>
@@ -41,33 +48,47 @@ public abstract class Protocol : IDisposable
     /// Send something
     /// </summary>
     /// <param name="sender">Sender</param>
+    /// <param name="zlpRead">Read an empty packet</param>
     /// <param name="receiver">Receiver (optional)</param>
     /// <param name="timeout">Reader/Writer Timeout</param>
     /// <param name="alwaysExpectData">Throw an exception if no data received</param>
     /// <returns>Receiver with received data, null if no data received</returns>
     /// <exception cref="UnexpectedErrorException">Unexpected Error</exception>
-    public virtual IReceiver Send(ISender sender, IReceiver receiver = null, bool alwaysExpectData = false, int timeout = 2000)
+    public IReceiver Send(ISender sender = null, IReceiver receiver = null, 
+        bool alwaysExpectData = false, int timeout = 2000, bool zlpRead = false)
     {
-        var buf = sender.Send();
-        var code = _writer.Write(buf, timeout, out var transferred);
-        if (code != ErrorCode.Ok && code != ErrorCode.Success)
-            throw new UnexpectedErrorException(
-                $"LibUSB error: {code} ({UsbDevice.LastErrorString} {UsbDevice.LastErrorNumber})");
-        if (buf.Length != transferred)
-            throw new UnexpectedErrorException($"Sent {buf.Length}, transmitted {transferred}!");
+        if (sender != null) {
+            var buf = sender.Send();
+            var code = _writer.Write(buf, timeout, out var transferred);
+            if (code != ErrorCode.Ok && code != ErrorCode.Success)
+                throw new UnexpectedErrorException(
+                    $"LibUSB error: {code} ({UsbDevice.LastErrorString} {UsbDevice.LastErrorNumber})");
+            if (buf.Length != transferred)
+                throw new UnexpectedErrorException($"Sent {buf.Length}, transmitted {transferred}!");
 
+            if (_zlpNeeded) {
+                // try to send an empty packet
+                code = _writer.Write(null, 0, 0, 100, out _);
+                if (code != ErrorCode.Ok && code != ErrorCode.Success)
+                    _zlpNeeded = false; // Disable empty packets, they're not needed
+            }
+        }
+
+        if (zlpRead)
+            _reader.Read(null, 0, 0, 100, out _);
+        
         if (receiver == null) return null;
-        buf = new byte[1024];
-        code = _reader.Read(buf, timeout, out transferred);
-        if (code != ErrorCode.Ok && code != ErrorCode.Success)
+        var buf2 = new byte[1024];
+        var code2 = _reader.Read(buf2, timeout, out var transferred2);
+        if (code2 != ErrorCode.Ok && code2 != ErrorCode.Success)
             throw new UnexpectedErrorException(
-                $"LibUSB error: {code} ({UsbDevice.LastErrorString} {UsbDevice.LastErrorNumber})");
-        if (transferred == 0) {
+                $"LibUSB error: {code2} ({UsbDevice.LastErrorString} {UsbDevice.LastErrorNumber})");
+        if (transferred2 == 0) {
             if (alwaysExpectData)
                 throw new UnexpectedErrorException("Expected at least some data, received zero!");
             return null;
         }
-        receiver.Receive(buf);
+        receiver.Receive(buf2);
         return receiver;
     }
 

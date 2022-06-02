@@ -114,10 +114,12 @@ public class OdinProtocol : Protocol
                 new RawByteBuffer(), true);
             target.Write(res2.Data);
         }
-        
+
+        Send(zlpRead: true);
         Send(new BasicCmdSender((int)PacketType.PitXmit, 
                 (int)XmitShared.End),
-            new BasicCmdReceiver((int)PacketType.PitXmit), true);
+            new BasicCmdReceiver((int)PacketType.PitXmit), 
+            true);
     }
 
     /// <summary>
