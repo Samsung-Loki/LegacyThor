@@ -80,6 +80,8 @@ public class DeviceSession : IDisposable
     /// Protocol type (Loke/Odin)
     /// </summary>
     public ProtocolTypeEnum ProtocolType;
+    
+    public DeviceSession() {}
 
     /// <summary>
     /// Initialize an USB device

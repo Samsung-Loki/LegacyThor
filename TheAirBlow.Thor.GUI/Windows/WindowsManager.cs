@@ -45,24 +45,48 @@ public static class WindowsManager
     }
 
     /// <summary>
+    /// Make the File Picker draw and do it's thing
+    /// </summary>
+    /// <param name="title">Window's Title</param>
+    /// <param name="extensions">Extensions split by |</param>
+    /// <param name="id">ID, you should get why it's needed</param>
+    /// <param name="directory">Select directory (true) or file (false)</param>
+    public static void OpenFilePicker(string title, string id, string extensions = "", bool directory = false)
+        => ((FilePickerWindow) _windows["filepicker"]).CreateNew(title, id, extensions, directory);
+
+    /// <summary>
+    /// File Picker's selected pack
+    /// </summary>
+    public static string? SelectedFilePickerPath => 
+        _windows["filepicker"].IsOpened() ? null : 
+            ((FilePickerWindow) _windows["filepicker"]).SelectedPath;
+    
+    /// <summary>
+    /// File Picker's ID
+    /// </summary>
+    public static string? FilePickerID =>
+        _windows["filepicker"].IsOpened() ? null : 
+        ((FilePickerWindow) _windows["filepicker"]).ID;
+
+    /// <summary>
+    /// Clear File Picker's ID
+    /// </summary>
+    public static void ClearPicker()
+        => ((FilePickerWindow) _windows["filepicker"]).ID = "";
+
+    /// <summary>
     /// Open a window
     /// </summary>
     /// <param name="name">Name</param>
     public static void Open(string name)
-    {
-        Program.Logger.Information($"Opened window {name}");
-        _windows[name].Open();
-    }
+        => _windows[name].Open();
 
     /// <summary>
     /// Close a window
     /// </summary>
     /// <param name="name">Name</param>
     public static void Close(string name)
-    {
-        Program.Logger.Information($"Closed window {name}");
-        _windows[name].Close();
-    }
+        => _windows[name].Close();
 
     /// <summary>
     /// Is window opened
@@ -93,9 +117,10 @@ public static class WindowsManager
             var io = ImGui.GetIO();
             ImGui.SetNextWindowPos(new Vector2(io.DisplaySize.X * 0.5f, io.DisplaySize.Y * 0.5f), 
                 ImGuiCond.Always, new Vector2(0.5f, 0.5f));
-            if (ImGui.Begin(title, ref open, ImGuiWindowFlags.Popup | ImGuiWindowFlags.AlwaysAutoResize)) {
+            ImGui.SetNextWindowFocus();
+            if (ImGui.Begin(title, ref open, ImGuiWindowFlags.AlwaysAutoResize)) {
                 ImGui.Text(message);
-                if (ImGui.Button("OK"))
+                if (ImGui.Button("OK", new Vector2(ImGui.GetWindowWidth() - 18, 30)))
                     open = false;
                 ImGui.End();
             }
@@ -108,8 +133,18 @@ public static class WindowsManager
     /// </summary>
     public static void Draw()
     {
-        foreach (var window in _windows)
-            if (window.Value.IsOpened()) window.Value.Draw();
+        foreach (var window in _windows) {
+            try {
+                if (window.Value.IsOpened()) window.Value.Draw();
+            } catch (Exception e) {
+                Program.Logger.Error(e, $"Exception in window {window.Value.VisibleName}");
+                ShowPopup($"{window.Value.VisibleName} window crashed",
+                    "It is, uh, very much not intended to happen!\n" +
+                    "That window was completely disabled to prevent crashing.\n" +
+                    "Please report this issue on Thor's GitHub including logs.");
+                _windows.Remove(window.Key);
+            }
+        }
         if (_popupAction != null) _popupAction();
     }
 }

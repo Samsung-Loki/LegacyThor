@@ -10,6 +10,7 @@ namespace TheAirBlow.Thor.GUI.Windows;
 /// </summary>
 public abstract class Window
 {
+    public abstract string VisibleName { get; }
     private bool _isOpened;
 
     /// <summary>

@@ -3,6 +3,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+using System;
 using System.IO;
 using System.Text;
 
@@ -30,6 +31,7 @@ public class BasicCmdSender : ISender
         binary.Write(type); binary.Write(command);
         
         _buffer = memory.ToArray();
+        Array.Resize(ref _buffer, 1024);
     }
     
     /// <summary>
@@ -37,7 +39,7 @@ public class BasicCmdSender : ISender
     /// </summary>
     /// <param name="type">Packet Type</param>
     /// <param name="command">Command</param>
-    /// <param name="arguments">Int32 Arguments</param
+    /// <param name="arguments">Int32 Arguments</param>
     public BasicCmdSender(int type, int command, params int[] arguments)
     {
         using var memory = new MemoryStream();
@@ -47,6 +49,25 @@ public class BasicCmdSender : ISender
             binary.Write(i);
         
         _buffer = memory.ToArray();
+        Array.Resize(ref _buffer, 1024);
+    }
+    
+    /// <summary>
+    /// A basic command with Int32 arguments
+    /// </summary>
+    /// <param name="type">Packet Type</param>
+    /// <param name="command">Command</param>
+    /// <param name="arguments">Int32 Arguments</param>
+    public BasicCmdSender(int type, int command, params uint[] arguments)
+    {
+        using var memory = new MemoryStream();
+        using var binary = new BinaryWriter(memory);
+        binary.Write(type); binary.Write(command);
+        foreach (var i in arguments)
+            binary.Write(i);
+        
+        _buffer = memory.ToArray();
+        Array.Resize(ref _buffer, 1024);
     }
     
     /// <summary>
@@ -54,7 +75,7 @@ public class BasicCmdSender : ISender
     /// </summary>
     /// <param name="type">Packet Type</param>
     /// <param name="command">Command</param>
-    /// <param name="argument">String Argument</param
+    /// <param name="argument">String Argument</param>
     public BasicCmdSender(int type, int command, string argument)
     {
         using var memory = new MemoryStream();
@@ -64,5 +85,6 @@ public class BasicCmdSender : ISender
             .GetBytes(argument));
         
         _buffer = memory.ToArray();
+        Array.Resize(ref _buffer, 1024);
     }
 }

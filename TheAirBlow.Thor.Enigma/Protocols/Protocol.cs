@@ -35,18 +35,21 @@ public abstract class Protocol : IDisposable
         _reader = reader;
     }
     
+    internal Protocol() { }
+    
     /// <summary>
     /// Send something
     /// </summary>
     /// <param name="sender">Sender</param>
     /// <param name="receiver">Receiver (optional)</param>
+    /// <param name="timeout">Reader/Writer Timeout</param>
     /// <param name="alwaysExpectData">Throw an exception if no data received</param>
     /// <returns>Receiver with received data, null if no data received</returns>
     /// <exception cref="UnexpectedErrorException">Unexpected Error</exception>
-    protected IReceiver Send(ISender sender, IReceiver receiver = null, bool alwaysExpectData = false)
+    public virtual IReceiver Send(ISender sender, IReceiver receiver = null, bool alwaysExpectData = false, int timeout = 2000)
     {
         var buf = sender.Send();
-        var code = _writer.Write(buf, 0, out var transferred);
+        var code = _writer.Write(buf, timeout, out var transferred);
         if (code != ErrorCode.Ok && code != ErrorCode.Success)
             throw new UnexpectedErrorException(
                 $"LibUSB error: {code} ({UsbDevice.LastErrorString} {UsbDevice.LastErrorNumber})");
@@ -55,7 +58,7 @@ public abstract class Protocol : IDisposable
 
         if (receiver == null) return null;
         buf = new byte[1024];
-        code = _reader.Read(buf, 2000, out transferred);
+        code = _reader.Read(buf, timeout, out transferred);
         if (code != ErrorCode.Ok && code != ErrorCode.Success)
             throw new UnexpectedErrorException(
                 $"LibUSB error: {code} ({UsbDevice.LastErrorString} {UsbDevice.LastErrorNumber})");

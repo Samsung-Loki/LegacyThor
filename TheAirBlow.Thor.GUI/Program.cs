@@ -4,6 +4,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 using System;
+using Serilog;
 using Serilog.Core;
 
 namespace TheAirBlow.Thor.GUI;
@@ -13,7 +14,12 @@ public static class Program
     /// <summary>
     /// Global SeriLog logger
     /// </summary>
-    public static Logger Logger;
+    public static Logger Logger = new LoggerConfiguration()
+        .WriteTo.File("main.log")
+        .WriteTo.LogWindow(outputTemplate: 
+            "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+        .WriteTo.Console()
+        .CreateLogger();
         
     /// <summary>
     /// Run the Hreidmar renderer

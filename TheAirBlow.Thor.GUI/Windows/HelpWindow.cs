@@ -10,15 +10,18 @@ namespace TheAirBlow.Thor.GUI.Windows;
 public class HelpWindow : Window
 {
     /// <summary>
+    /// Visible name of the window
+    /// </summary>
+    public override string VisibleName => "Help";
+    
+    /// <summary>
     /// Draw the Help window
     /// </summary>
     public override void Draw()
     {
         var opened = true;
         if (ImGui.Begin("Help", ref opened, ImGuiWindowFlags.AlwaysAutoResize)) {
-            ImGui.Text("Device window:");
-            ImGui.Text("Here is all USB devices detected.");
-            ImGui.Text("Select one of them and hit \"Connect\".");
+            ImGui.Text("In development!");
             ImGui.End();
         }
         if (!opened) Close();

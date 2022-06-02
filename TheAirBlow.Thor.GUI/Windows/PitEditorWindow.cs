@@ -11,9 +11,12 @@ namespace TheAirBlow.Thor.GUI.Windows;
 
 public class PitEditorWindow : Window
 {
-    private FilePicker? _picker;
-    private bool _isPicking;
     private PitFile? _pit;
+    
+    /// <summary>
+    /// Visible name of the window
+    /// </summary>
+    public override string VisibleName => "PIT Editor";
     
     /// <summary>
     /// Draw the Pit Editor window
@@ -22,10 +25,15 @@ public class PitEditorWindow : Window
     {
         var opened = true;
         if (ImGui.Begin("PIT Viewer", ref opened)) {
-            if (ImGui.Button("Open")) {
-                _picker = FilePicker.GetFilePicker("piteditor", Environment.GetFolderPath(
-                    Environment.SpecialFolder.Desktop), ".pit");
-                _isPicking = true;
+            if (ImGui.Button("Open"))
+                WindowsManager.OpenFilePicker("Select .PIT file", "piteditor", ".pit");
+            ImGui.SameLine();
+            if (ImGui.Button("Close"))
+                _pit = null;
+
+            if (WindowsManager.FilePickerID == "piteditor") {
+                _pit = new PitFile(WindowsManager.SelectedFilePickerPath);
+                WindowsManager.ClearPicker();
             }
 
             if (_pit != null) {
@@ -34,9 +42,13 @@ public class PitEditorWindow : Window
                     _pit.IsVersion2 = !_pit.IsVersion2;
                 ImGui.SameLine();
                 var version = _pit.IsVersion2 ? "2.0" : "1.0";
-                ImGui.Text($"GANG Name: {_pit.Header.GangName} | Project Name: {_pit.Header.ProjectName} | Version {version}");
+                var gang = string.IsNullOrEmpty(_pit.Header.GangName) ? "" : $"GANG Name: {_pit.Header.GangName} | ";
+                var project = string.IsNullOrEmpty(_pit.Header.ProjectName) ? "" : $"Project Name: {_pit.Header.ProjectName} | ";
+                ImGui.Text($"{gang}{project}Version {version}");
                 
-                if (ImGui.BeginTable("Partitions", 12, ImGuiTableFlags.Borders | ImGuiTableFlags.PreciseWidths | ImGuiTableFlags.SizingStretchProp)) {
+                if (ImGui.BeginTable("Partitions", 12, ImGuiTableFlags.Borders 
+                                                       | ImGuiTableFlags.PreciseWidths 
+                                                       | ImGuiTableFlags.SizingStretchProp)) {
                     ImGui.TableNextRow();
                     ImGui.TableNextColumn();
                     ImGui.Text("Binary Type");
@@ -66,7 +78,6 @@ public class PitEditorWindow : Window
                         ImGui.TableNextRow();
                         ImGui.TableNextColumn();
                         ImGui.Text(i.BinaryType.ToString());
-                        
                         ImGui.TableNextColumn();
                         ImGui.Text(i.DeviceType.ToString());
                         ImGui.TableNextColumn();
@@ -95,23 +106,6 @@ public class PitEditorWindow : Window
             }
             
             ImGui.End();
-        }
-
-        if (_isPicking)
-        {
-            var opened2 = true;
-            if (ImGui.Begin("File Picker (PIT Editor)", ref opened2, ImGuiWindowFlags.AlwaysAutoResize)) {
-                if (_picker!.Draw()) {
-                    Program.Logger.Information($"Trying to load PIT file from {_picker.SelectedFile}...");
-                    _isPicking = false;
-                    try { _pit = new(_picker.SelectedFile); }
-                    catch (Exception e) { Program.Logger.Error(e, 
-                        "Unable to parse selected PIT file!"); }
-                    Program.Logger.Information("Successfully loaded the PIT file!");
-                }
-            }
-
-            if (!opened2) _isPicking = false;
         }
         if (!opened) Close();
     }

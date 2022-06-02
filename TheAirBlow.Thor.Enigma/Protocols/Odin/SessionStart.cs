@@ -16,9 +16,9 @@ public enum SessionStart
     BeginSession = 0x00,
     
     /// <summary>
-    /// Get Device's Type (obsolete)
+    /// Reset flash counter
     /// </summary>
-    DeviceType = 0x01,
+    ResetFlashCounter = 0x01,
     
     /// <summary>
     /// Set Total Bytes

@@ -4,6 +4,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 using System;
+using System.Runtime.InteropServices;
 using ImGuiNET;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -25,6 +26,11 @@ public class MonoGameController : Game
     /// GraphicsDeviceManager instance
     /// </summary>
     private GraphicsDeviceManager _graphics;
+
+    /// <summary>
+    /// Instance of MonoGameController
+    /// </summary>
+    public static MonoGameController Instance;
         
     /// <summary>
     /// ImGuiNET renderer
@@ -58,6 +64,16 @@ public class MonoGameController : Game
     /// Background Texture
     /// </summary>
     private Texture2D _backgroundTexture;
+    
+    /// <summary>
+    /// Thor's logo (totally not stolen Samsung icon)
+    /// </summary>
+    public IntPtr Logo;
+    
+    /// <summary>
+    /// TheAirBlow, the got himself
+    /// </summary>
+    public IntPtr God;
 
     /// <summary>
     /// Initialize GraphicsDeviceManager
@@ -73,26 +89,34 @@ public class MonoGameController : Game
         };
 
         IsMouseVisible = true;
+        Instance = this;
     }
 
     /// <summary>
     /// Initialize font, styling, windows, etc.
     /// </summary>
-    protected override void Initialize()
+    protected override unsafe void Initialize()
     {
         // Rendering
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         _imGuiRenderer = new ImGuiRenderer(this);
+        int[] ranges = {
+            0x0020, 0x00FF, // Basic Latin + Latin Supplement
+            0x0400, 0x044F  // Cyrillic
+        };
         _font = ImGui.GetIO().Fonts.AddFontFromFileTTF(
-            "Karla-Regular.ttf", 20);
+            "NotoSans-Regular.ttf", 22, 
+            ImGuiNative.ImFontConfig_ImFontConfig(), 
+            ImGui.GetIO().Fonts.GetGlyphRangesCyrillic());
         _imGuiRenderer.RebuildFontAtlas();
 
         // Styling
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 3);
-        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 3);
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 10);
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 6);
+        ImGui.PushStyleVar(ImGuiStyleVar.GrabRounding, 12);
         ImGui.GetIO().ConfigFlags |= ImGuiConfigFlags.DockingEnable;
         Window.AllowUserResizing = true;
-        
+
         // Background texture
         var random = new Random();
         _backgroundTexture = Content
@@ -100,27 +124,26 @@ public class MonoGameController : Game
                 random.Next(0, _backgroundImages.Length)
             ]);
 
+        Logo = _imGuiRenderer.BindTexture(Content.Load<Texture2D>("icon"));
+        God = _imGuiRenderer.BindTexture(Content.Load<Texture2D>("theairblow"));
+
         // Windows
+        WindowsManager.Add("filepicker", new FilePickerWindow());
         WindowsManager.Add("pitedit", new PitEditorWindow());
-        WindowsManager.Add("about", new AboutWindow());
-        WindowsManager.Add("faq", new FaqWindow());
-        WindowsManager.Add("help", new HelpWindow());
         WindowsManager.Add("devices", new DevicesWindow());
+        WindowsManager.Add("about", new AboutWindow());
+        WindowsManager.Add("help", new HelpWindow());
+        WindowsManager.Add("logs", new LogsWindow());
+        WindowsManager.Add("faq", new FaqWindow());
 
         // Automatic refresh
         _timer.Interval = 100;
         _timer.Start();
         _timer.Elapsed += (_, _) => 
             WindowsManager.GetWindow<DevicesWindow>("devices").Refresh();
-            
-        // Initialize logger
-        Program.Logger = new LoggerConfiguration()
-            .WriteTo.File("main.log")
-            .WriteTo.Console()
-            .CreateLogger();
+        
+        Program.Logger.Information("Welcome to Thor GUI!");
 
-        Program.Logger.Information("Logger successfully initialized!");
-            
         Window.Title = "Thor GUI";
         
         base.Initialize();
@@ -184,7 +207,7 @@ public class MonoGameController : Game
             }
             ImGui.EndMainMenuBar();
         }
-            
+
         // Draw windows
         WindowsManager.Draw();
     }

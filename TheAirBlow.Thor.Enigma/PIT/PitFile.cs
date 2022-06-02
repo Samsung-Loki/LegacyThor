@@ -131,8 +131,8 @@ public class PitFile
             if (magic != 0x12349876)
                 throw new InvalidDataException($"Expected 0x12349876 magic number, got {magic:X2}");
             Header.PartitionsCount = reader.ReadInt32();
-            Header.GangName = Encoding.UTF8.GetString(reader.ReadBytes(8)).TrimEnd('\0');
-            Header.ProjectName = Encoding.UTF8.GetString(reader.ReadBytes(8)).TrimEnd('\0');
+            Header.GangName = Encoding.UTF8.GetString(reader.ReadBytes(8)).Replace("\0", "");
+            Header.ProjectName = Encoding.UTF8.GetString(reader.ReadBytes(8)).Replace("\0", "");
             Header.Dummy = reader.ReadInt32();
             for (var i = 0; i < Header.PartitionsCount; i++)
                 Entries.Add(new PitEntry {
@@ -145,9 +145,9 @@ public class PitFile
                     BlockCountOrNumber = reader.ReadInt32(),
                     FileOffset = reader.ReadInt32(),
                     FileSize = reader.ReadInt32(),
-                    Name = Encoding.UTF8.GetString(reader.ReadBytes(32)).TrimEnd('\0'),
-                    FileName = Encoding.UTF8.GetString(reader.ReadBytes(32)).TrimEnd('\0'),
-                    DeltaName = Encoding.UTF8.GetString(reader.ReadBytes(32)).TrimEnd('\0')
+                    Name = Encoding.UTF8.GetString(reader.ReadBytes(32)).Replace("\0", ""),
+                    FileName = Encoding.UTF8.GetString(reader.ReadBytes(32)).Replace("\0", ""),
+                    DeltaName = Encoding.UTF8.GetString(reader.ReadBytes(32)).Replace("\0", "")
                 });
         }
 

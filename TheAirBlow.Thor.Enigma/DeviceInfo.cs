@@ -15,6 +15,8 @@ public class DeviceInfo
     public string CarrierID;
     public string SerialCode;
     
+    public DeviceInfo() {}
+    
     public DeviceInfo(byte[] buf)
     {
         using var memory = new MemoryStream(buf);

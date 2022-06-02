@@ -6,6 +6,7 @@
 using System;
 using System.IO;
 using LibUsbDotNet;
+using TheAirBlow.Thor.Enigma.Exceptions;
 using TheAirBlow.Thor.Enigma.Protocols.Odin;
 using TheAirBlow.Thor.Enigma.Receivers;
 using TheAirBlow.Thor.Enigma.Senders;
@@ -17,6 +18,11 @@ namespace TheAirBlow.Thor.Enigma.Protocols;
 /// </summary>
 public class OdinProtocol : Protocol
 {
+    public int SequenceSize = 131072 * 800;
+    public int PartsPerSequence = 800;
+    public int FilePartSize = 131072;
+    public int FlashTimeout = 30000;
+
     private bool _done;
     
     /// <summary>
@@ -36,9 +42,23 @@ public class OdinProtocol : Protocol
             new StringAck("LOKE"));
         if (rec != null) {
             _done = true;
-            Send(new BasicCmdSender((int)PacketType.SessionStart, 
+            var data = (BasicCmdReceiver)Send(new BasicCmdSender((int)PacketType.SessionStart, 
                     (int)SessionStart.BeginSession),
-                new ByteAck((int)PacketType.SessionStart), true);
+                new BasicCmdReceiver((int)PacketType.SessionStart), 
+                true);
+            
+            // Check for worst case scenario - Odin v1
+            if (data.Arguments[0] != 0) {
+                SequenceSize = 1048576 * 30;
+                FilePartSize = 1048576;
+                PartsPerSequence = 30;
+                FlashTimeout = 120000;
+                
+                Send(new BasicCmdSender((int)PacketType.SessionStart, 
+                        (int)SessionStart.FilePartSize, FilePartSize),
+                    new ByteAck((int)PacketType.SessionStart), 
+                    true);
+            }
         }
         return rec != null;
     }
