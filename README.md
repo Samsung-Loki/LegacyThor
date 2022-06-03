@@ -22,6 +22,7 @@ Here is a list of new features, not implemented in Heimdall:
 5) [x] PIT viewer built-in, with more accurate information
 6) [ ] Ability to do NAND Erase All (actually it just erases userdata)
 7) [x] Ability to do DevInfo (information about the device: model, carrier id, region, serial code)
+
 ([x] is already implemented, [ ] is to-do)
 
 ## OSS Licence
