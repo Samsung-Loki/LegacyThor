@@ -58,7 +58,7 @@ public class BasicCmdSender : ISender
     /// <param name="type">Packet Type</param>
     /// <param name="command">Command</param>
     /// <param name="arguments">Int32 Arguments</param>
-    public BasicCmdSender(int type, int command, params uint[] arguments)
+    public BasicCmdSender(int type, int command, params long[] arguments)
     {
         using var memory = new MemoryStream();
         using var binary = new BinaryWriter(memory);

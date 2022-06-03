@@ -28,5 +28,20 @@ public enum XmitShared
     /// <summary>
     /// End operaiton
     /// </summary>
-    End = 0x03
+    End = 0x03,
+    
+    /// <summary>
+    /// Requst a compressed flash operation
+    /// </summary>
+    RequestCompressedFlash = 0x05,
+    
+    /// <summary>
+    /// Begin compressed operation
+    /// </summary>
+    BeginCompressed = 0x06,
+    
+    /// <summary>
+    /// End compressed operation
+    /// </summary>
+    EndCompressed = 0x07
 }

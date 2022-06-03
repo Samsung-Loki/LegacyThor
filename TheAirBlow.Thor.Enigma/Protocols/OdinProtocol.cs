@@ -22,7 +22,8 @@ public class OdinProtocol : Protocol
     public int PartsPerSequence = 800;
     public int FilePartSize = 131072;
     public int FlashTimeout = 30000;
-
+    public bool CompressedSupported;
+    
     private bool _done;
     
     /// <summary>
@@ -53,7 +54,8 @@ public class OdinProtocol : Protocol
                 FilePartSize = 1048576;
                 PartsPerSequence = 30;
                 FlashTimeout = 120000;
-                
+
+                CompressedSupported = ((data.Arguments[0] >> 8) & 0xf0) == 0x80;
                 Send(new BasicCmdSender((int)PacketType.SessionStart, 
                         (int)SessionStart.FilePartSize, FilePartSize),
                     new ByteAck((int)PacketType.SessionStart), 
@@ -145,4 +147,33 @@ public class OdinProtocol : Protocol
         => Send(new BasicCmdSender((int)PacketType.SessionEnd,
                 (int)SessionEnd.OdinReboot),
             new ByteAck((int) PacketType.SessionEnd), true);
+    
+    /// <summary>
+    /// Erase UserData
+    /// </summary>
+    public void NandEraseAll()
+        => Send(new BasicCmdSender((int)PacketType.SessionStart,
+                (int)SessionStart.NandEraseAll),
+            new ByteAck((int) PacketType.SessionStart), 
+            timeout: 12000);
+    
+    /// <summary>
+    /// Enable T-Flash
+    /// </summary>
+    public void EnableTFlash()
+        => Send(new BasicCmdSender((int)PacketType.SessionStart, 
+                (int)SessionStart.EnableTFlash),
+            new ByteAck((int)PacketType.SessionStart),
+            true);
+    
+    /// <summary>
+    /// Send total transfer bytes
+    /// </summary>
+    /// <param name="total">Total</param>
+    /// <param name="total">Total</param>
+    public void SendTotalBytes(long total)
+        => Send(new BasicCmdSender((int)PacketType.SessionStart, 
+                (int)SessionStart.TotalBytes, total),
+            new ByteAck((int)PacketType.SessionStart),
+            true);
 }

@@ -10,6 +10,7 @@ using System.Linq;
 using System.Numerics;
 using System.Threading;
 using ImGuiNET;
+using K4os.Compression.LZ4.Streams;
 using LibUsbDotNet;
 using LibUsbDotNet.Main;
 using Serilog;
@@ -367,6 +368,13 @@ public class DevicesWindow : Window
                     ((OdinProtocol) Session?.Protocol!).OdinReboot();
                     Session = null;
                 }
+                ImGui.SameLine();
+                if (ImGui.Button("Factory Reset")) {
+                    WindowsManager.ShowPopup("Thor GUI",
+                        $"Successfully erased UserData!");
+                    ((OdinProtocol) Session?.Protocol!).NandEraseAll();
+                    Session = null;
+                }
                 ImGui.EndDisabled();
             }
             ImGui.End();
@@ -660,8 +668,8 @@ public class DevicesWindow : Window
     private void FlashingThread()
     {
         var protocol = (OdinProtocol) Session!.Protocol;
-        var total = _repartition ? (uint)_pitOriginal.Length : 0;
-        var totalDone = 0u;
+        var total = _repartition ? (long)_pitOriginal.Length : 0;
+        var totalDone = 0L;
         
         // Manual mode
         var list = new List<(PitEntry, string)>();
@@ -709,19 +717,11 @@ public class DevicesWindow : Window
         }
         #endregion
         #region Total Size
-        // 4.2GB maximum firmware size, Samsung uses uint instead of long
-        protocol.Send(new BasicCmdSender((int)PacketType.SessionStart, 
-                (int)SessionStart.TotalBytes, total),
-            new ByteAck((int)PacketType.SessionStart),
-            true);
+        protocol.SendTotalBytes(total);
         #endregion
         #region T-Flash
         // Endable T-Flash if needed
-        if (_tFlash)
-            protocol.Send(new BasicCmdSender((int)PacketType.SessionStart, 
-                    (int)SessionStart.EnableTFlash),
-                new ByteAck((int)PacketType.SessionStart),
-                true);
+        if (_tFlash) protocol.EnableTFlash();
         #endregion
         #region Re-Partition
         // Re-Partition if needed
@@ -804,20 +804,29 @@ public class DevicesWindow : Window
     /// <param name="stream">Stream to read</param>
     /// <param name="fileSize">File's size</param>
     /// <param name="totalDone">Done in total</param>
+    /// <param name="compressed">LZ4 compressed</param>
     /// <param name="totalMax">Maximum total value</param>
     /// <returns></returns>
     /// <exception cref="UnexpectedValueException"></exception>
-    private uint Flash(PitEntry entry, Stream stream, long fileSize, uint totalDone, uint totalMax)
+    private long Flash(PitEntry entry, Stream stream, long fileSize, 
+        long totalDone, long totalMax, bool compressed = false)
     {
-        uint transferred = 0;
+        var transferred = 0L;
         var protocol = (OdinProtocol) Session!.Protocol;
         var sequences = fileSize / protocol.SequenceSize;
         var lastSequence = (int)(fileSize % protocol.SequenceSize);
         if (lastSequence != 0)
             sequences++;
 
+        Stream? original = null;
+        if (compressed && !protocol.CompressedSupported) {
+            original = stream; // Manual decompression
+            stream = LZ4Stream.Decode(original);
+        }
+        
+        var add = compressed && protocol.CompressedSupported ? 4 : 0;
         protocol.Send(new BasicCmdSender((int)PacketType.FileXmit, 
-                (int)XmitShared.RequestFlash),
+                (int)XmitShared.RequestFlash + add),
             new ByteAck((int)PacketType.FileXmit), 
             true);
         
@@ -825,7 +834,7 @@ public class DevicesWindow : Window
             var last = i == sequences - 1;
             var size = last ? lastSequence : protocol.SequenceSize;
             protocol.Send(new BasicCmdSender((int)PacketType.FileXmit, 
-                    (int)XmitShared.Begin, size),
+                    (int)XmitShared.Begin + add, size),
                 new ByteAck((int)PacketType.FileXmit), 
                 true);
             var fileParts = size / protocol.FilePartSize;
@@ -852,7 +861,7 @@ public class DevicesWindow : Window
                     throw new UnexpectedValueException(
                         $"Bootloader index {res.Arguments[0]} " +
                         $"doesn't match actual index {j}!");
-                transferred += (uint)protocol.FilePartSize;
+                transferred += protocol.FilePartSize;
                 _currentFraction = CalcPercentage(transferred, fileSize);
                 _totalFraction = CalcPercentage(totalDone + transferred, totalMax);
             }
@@ -860,7 +869,7 @@ public class DevicesWindow : Window
             switch (entry.BinaryType) {
                 case BinaryType.AP: // Phone
                     protocol.Send(new BasicCmdSender((int)PacketType.FileXmit, 
-                            (int)XmitShared.End, 0x00,
+                            (int)XmitShared.End + add, 0x00,
                             size, 0x00, (int)entry.DeviceType, entry.Identifier,
                             last ? 1 : 0),
                         new ByteAck((int)PacketType.FileXmit), 
@@ -868,7 +877,7 @@ public class DevicesWindow : Window
                     break;
                 case BinaryType.CP: // Modem
                     protocol.Send(new BasicCmdSender((int)PacketType.FileXmit, 
-                            (int)XmitShared.End, 0x01,
+                            (int)XmitShared.End + add, 0x01,
                             size, 0x00, (int)entry.DeviceType,
                             last ? 1 : 0),
                         new ByteAck((int)PacketType.FileXmit), 
@@ -877,6 +886,7 @@ public class DevicesWindow : Window
             }
         }
 
+        if (original != null) stream.Dispose();
         return totalDone + transferred;
     }
 

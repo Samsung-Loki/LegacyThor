@@ -43,7 +43,7 @@ public enum SessionStart
     /// <summary>
     /// Do a factory reset
     /// </summary>
-    EraseUserdata = 0x07,
+    NandEraseAll = 0x07,
     
     /// <summary>
     /// Enable T-Flash
