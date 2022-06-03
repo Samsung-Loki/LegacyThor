@@ -776,7 +776,8 @@ public class DevicesWindow : Window
                         ? "" : $" ({entry.FileName})";
                     _flashStatus = $"Flashing {entry.Name}{ext}...";
                     using var stream = new FileStream(file, FileMode.Open, FileAccess.Read);
-                    totalDone = Flash(entry, stream, sizes[file], totalDone, total);
+                    totalDone = Flash(entry, stream, sizes[file], totalDone, 
+                        total, file.EndsWith("lz4"));
                 }
                 break;
             case 2:
@@ -806,8 +807,7 @@ public class DevicesWindow : Window
     /// <param name="totalDone">Done in total</param>
     /// <param name="compressed">LZ4 compressed</param>
     /// <param name="totalMax">Maximum total value</param>
-    /// <returns></returns>
-    /// <exception cref="UnexpectedValueException"></exception>
+    /// <returns>New total progress</returns>
     private long Flash(PitEntry entry, Stream stream, long fileSize, 
         long totalDone, long totalMax, bool compressed = false)
     {
