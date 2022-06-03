@@ -15,14 +15,14 @@ It is completely cross-platform - Windows, Linux and Mac OS are all supported!
 
 ## New features
 Here is a list of new features, not implemented in Heimdall:
-1) ❎ Ability to flash from BL/AP/CP/CSC .tar archives directly
-2) ❎ Ability do download latest firmware and flash it automatically
-3) ❎ Ability to flash compressed (.lz4) files directly (newly discovered)
-4) ✅ You can shut down the device from GUI immediately (no reboot)
-5) ✅ PIT viewer built-in, with more accurate information
-6) ❎ Ability to do NAND Erase All (actually it just erases userdata)
-7) ✅ Ability to do DevInfo (information about the device: model, carrier id, region, serial code)
-(✅ is already implemented, ❎ is to-do)
+1) [ ] Ability to flash from BL/AP/CP/CSC .tar archives directly
+2) [ ] Ability do download latest firmware and flash it automatically
+3) [ ] Ability to flash compressed (.lz4) files directly (newly discovered)
+4) [x] You can shut down the device from GUI immediately (no reboot)
+5) [x] PIT viewer built-in, with more accurate information
+6) [ ] Ability to do NAND Erase All (actually it just erases userdata)
+7) [x] Ability to do DevInfo (information about the device: model, carrier id, region, serial code)
+([x] is already implemented, [ ] is to-do)
 
 ## OSS Licence
 We use a free OSS licence from JetBrains to develop Thor. \
