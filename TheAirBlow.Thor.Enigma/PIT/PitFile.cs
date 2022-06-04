@@ -155,7 +155,6 @@ public class PitFile
         DetectVersion();
 
         // Convert V1 to V2 if needed
-        
         foreach (var i in Entries) {
             if ((int) i.DeviceType == 2) 
                 i.DeviceType = IsVersion2 ? DeviceType.EMMC : DeviceType.MOVINAND;

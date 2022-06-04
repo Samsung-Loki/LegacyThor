@@ -15,7 +15,7 @@ It is completely cross-platform - Windows, Linux and Mac OS are all supported!
 
 ## New features
 Here is a list of new features, not implemented in Heimdall:
-1) [ ] Ability to flash from BL/AP/CP/CSC .tar archives directly
+1) [x] Ability to flash from BL/AP/CP/CSC .tar archives directly
 2) [ ] Ability do download latest firmware and flash it automatically
 3) [x] Ability to flash compressed (.lz4) files directly (newly discovered)
 4) [x] You can shut down the device from GUI immediately (no reboot)

@@ -44,7 +44,8 @@ public class FilePickerWindow : Window
     /// <summary>
     /// Current directory
     /// </summary>
-    private string _currentDir = null!;
+    private string _currentDir = Environment.GetFolderPath(
+        Environment.SpecialFolder.Desktop);
     
     /// <summary>
     /// Directory/file picker
@@ -238,8 +239,6 @@ public class FilePickerWindow : Window
         _extensions = new();
         _undoDirectories = new();
         _redoDirectories = new();
-        _currentDir = Environment.GetFolderPath(
-            Environment.SpecialFolder.Desktop);
         _inputBox = _currentDir;
         foreach (var i in extensions.Split("|", 
                      StringSplitOptions.RemoveEmptyEntries))

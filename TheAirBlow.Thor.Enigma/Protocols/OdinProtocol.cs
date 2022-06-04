@@ -44,7 +44,7 @@ public class OdinProtocol : Protocol
         if (rec != null) {
             _done = true;
             var data = (BasicCmdReceiver)Send(new BasicCmdSender((int)PacketType.SessionStart, 
-                    (int)SessionStart.BeginSession),
+                    (int)SessionStart.BeginSession, 0x04),
                 new BasicCmdReceiver((int)PacketType.SessionStart), 
                 true);
             
@@ -169,7 +169,6 @@ public class OdinProtocol : Protocol
     /// <summary>
     /// Send total transfer bytes
     /// </summary>
-    /// <param name="total">Total</param>
     /// <param name="total">Total</param>
     public void SendTotalBytes(long total)
         => Send(new BasicCmdSender((int)PacketType.SessionStart, 

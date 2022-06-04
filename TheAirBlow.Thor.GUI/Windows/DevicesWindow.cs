@@ -8,7 +8,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Text;
 using System.Threading;
+using ICSharpCode.SharpZipLib.Tar;
 using ImGuiNET;
 using K4os.Compression.LZ4.Streams;
 using LibUsbDotNet;
@@ -263,7 +265,7 @@ public class DevicesWindow : Window
     /// <summary>
     /// Enable debug features
     /// </summary>
-    private bool _debug = false;
+    private bool _debug = true;
 
     /// <summary>
     /// Draw the Devices/FlashTool window
@@ -507,7 +509,7 @@ public class DevicesWindow : Window
                                 ImGui.TableNextColumn();
                                 if (ImGui.Button($"Browse##{tars[i]}"))
                                     WindowsManager.OpenFilePicker($"Select {tars[i]} .tar archive", tars[i],
-                                        ".tar.md5|.tar");
+                                        ".md5|.tar");
                             }
 
                             ImGui.EndTable();
@@ -674,16 +676,43 @@ public class DevicesWindow : Window
         // Manual mode
         var list = new List<(PitEntry, string)>();
         var sizes = new Dictionary<string, long>();
+        Program.Logger.Information("Getting ready to flash...");
         _flashStatus = "Initializing...";
-        
+
         #region Initialize
         switch (_flashMode) {
             case 0:
-                // TODO: BL/AP/CP/CSC support
-                WindowsManager.ShowPopup("Not implemented yet",
-                    "Sorry, but BL/AP/CP/CSC mode is not complete");
-                _isFlashing = false;
-                return;
+                // All of this only to get the PIT file xD
+                if (!File.Exists(_inputBoxes[3]) && _pit == null) {
+                    WindowsManager.ShowPopup("Unable to get PIT",
+                        "CSC archive doesn't exist and no PIT is loaded!");
+                    _isFlashing = false;
+                    return;
+                }
+                
+                using (var file = new FileStream(_inputBoxes[3],
+                    FileMode.Open, FileAccess.Read))
+                using (var stream = new TarInputStream(file, Encoding.UTF8)) {
+                    var entry = stream.GetNextEntry();
+                    while (entry != null) {
+                        if (!entry.IsDirectory && entry.Name.EndsWith(".pit")) {
+                            try {
+                                _pit = new PitFile(stream);
+                                total += entry.Size;
+                                break;
+                            } catch (Exception e) {
+                                Program.Logger.Error(e, "An exception occured!");
+                                WindowsManager.ShowPopup("Unable to parse PIT",
+                                    "Invalid PIT file in CSC!");
+                                _isFlashing = false;
+                                return;
+                            }
+                        }
+                        entry = stream.GetNextEntry();
+                    }
+                }
+                
+                break;
             case 1:
                 // Get all of the partitions with file assigned
                 foreach (var i in _pitPartitions) {
@@ -727,6 +756,7 @@ public class DevicesWindow : Window
         // Re-Partition if needed
         if (_repartition) {
             _flashStatus = "Re-partitioning...";
+            Program.Logger.Information("Re-Partitioning, woah!");
             protocol.Send(new BasicCmdSender((int)PacketType.PitXmit, 
                     (int)XmitShared.RequestFlash),
                 new ByteAck((int)PacketType.PitXmit),
@@ -748,8 +778,55 @@ public class DevicesWindow : Window
         }
         #endregion
         #region Flash stuff
+        Program.Logger.Information("Starting to flash!");
         switch (_flashMode) {
             case 0:
+                for (var i = 0; i < 4; i++) {
+                    if (!File.Exists(_inputBoxes[i]))
+                        continue;
+
+                    using var file = new FileStream(_inputBoxes[i],
+                        FileMode.Open, FileAccess.Read);
+                    using var stream = new TarInputStream(file, Encoding.UTF8);
+                    var entry = stream.GetNextEntry();
+                    while (entry != null) {
+                        if (!entry.IsDirectory) {
+                            if (_cancelFlash) {
+                                _isFlashing = false;
+                                var pit = _repartition 
+                                    ? "\nDO NOT RESTART YOUR DEVICE! Flash it again while you can -\n" +
+                                      "you wouldn't be to do it if you restart the device!\n" +
+                                      "At least flash the bootloader, so you can access Odin mode.\n" +
+                                      "Otherwise you would be in EDL, and often Firehose files\n" +
+                                      "are available only to offical repair centers for recovery." : "";
+                                _repartition = false;
+                                var reset = _resetCounter ? 
+                                    "\nFlash counter wasn't reset - do not cancel next time." : "";
+                                WindowsManager.ShowPopup("Flashing cancelled",
+                                    "You cancelled the flashing operation, " +
+                                    "but some partitions were still flashed." 
+                                    + pit + reset);
+                                return;
+                            }
+
+                            var pitEntry = _pit!.Entries.FirstOrDefault(x => 
+                                x.FileName == entry.Name.Replace(".lz4", ""));
+                            if (pitEntry == null) {
+                                Program.Logger.Information($"Skipping {entry.Name}, no match found");
+                                entry = stream.GetNextEntry();
+                                continue;
+                            }
+                            
+                            var ext = string.IsNullOrEmpty(pitEntry.FileName)
+                                ? "" : $" ({pitEntry.FileName})";
+                            _flashStatus = $"Flashing {pitEntry.Name}{ext}...";
+                            Console.WriteLine($"Flashing {pitEntry.Name}{ext} {entry.Name}...");
+                            totalDone = Flash(pitEntry, stream, entry.Size, totalDone,
+                                total, entry.Name.EndsWith("lz4"));
+                        }
+                        entry = stream.GetNextEntry();
+                    }
+                }
                 break;
             case 1:
                 // Actually flash files
@@ -775,6 +852,7 @@ public class DevicesWindow : Window
                     var ext = string.IsNullOrEmpty(entry.FileName)
                         ? "" : $" ({entry.FileName})";
                     _flashStatus = $"Flashing {entry.Name}{ext}...";
+                    Console.WriteLine($"Flashing {entry.Name}{ext}...");
                     using var stream = new FileStream(file, FileMode.Open, FileAccess.Read);
                     totalDone = Flash(entry, stream, sizes[file], totalDone, 
                         total, file.EndsWith("lz4"));
