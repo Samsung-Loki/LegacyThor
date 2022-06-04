@@ -265,7 +265,7 @@ public class DevicesWindow : Window
     /// <summary>
     /// Enable debug features
     /// </summary>
-    private bool _debug = true;
+    private bool _debug = false;
 
     /// <summary>
     /// Draw the Devices/FlashTool window
