@@ -143,9 +143,7 @@ public class MonoGameController : Game
             WindowsManager.GetWindow<DevicesWindow>("devices").Refresh();
         
         Program.Logger.Information("Welcome to Thor GUI!");
-
         Window.Title = "Thor GUI";
-        
         base.Initialize();
     }
 

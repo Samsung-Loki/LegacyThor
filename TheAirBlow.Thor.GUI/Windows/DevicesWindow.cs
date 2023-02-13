@@ -110,6 +110,11 @@ public class DevicesWindow : Window
     #endregion
     #region Session
     /// <summary>
+    /// Current prompt command
+    /// </summary>
+    private string _promptCmd = "";
+    
+    /// <summary>
     /// Current session
     /// </summary>
     // ReSharper disable once MemberCanBePrivate.Global
@@ -303,9 +308,23 @@ public class DevicesWindow : Window
                 ImGui.Checkbox("Show non-compatible devices", ref _showNonSamsung);
                 if (CurrentDevice != null) {
                     ImGui.SameLine(ImGui.GetWindowWidth() - 80);
+                    if (ImGui.Button("Prompt")) {
+                        Program.Logger.Information($"Connecting to {CurrentDevice.Name} " +
+                                                   $"(0x{CurrentDevice.Vid:X4}/0x{CurrentDevice.Pid:X4}) in prompt mode...");
+                        Reset();
+                        try {
+                            Session = new DeviceSession(CurrentDevice, Program.Logger, true);
+                        } catch (Exception e) {
+                            Session = null;
+                            Program.Logger.Error(e, "An exception occured!");
+                            Program.Logger.Error($"Last error: {UsbDevice.LastErrorNumber} {UsbDevice.LastErrorString}");
+                            WindowsManager.ShowPopup("Unable to connect", e.Message);
+                        }
+                    }
+                    ImGui.SameLine(ImGui.GetWindowWidth() - 160);
                     if (ImGui.Button("Connect")) {
                         Program.Logger.Information($"Connecting to {CurrentDevice.Name} " +
-                                                   $"(0x{CurrentDevice.Vid:X4}/0x{CurrentDevice.Pid:X4})...");
+                                                   $"(0x{CurrentDevice.Vid:X4}/0x{CurrentDevice.Pid:X4}) in autodetect mode...");
                         Reset();
                         try {
                             Session = new DeviceSession(CurrentDevice, Program.Logger);
@@ -317,7 +336,7 @@ public class DevicesWindow : Window
                         }
 
                         if (Session?.ProtocolType == DeviceSession.ProtocolTypeEnum.Odin)
-                            _info = ((OdinProtocol) Session?.Protocol!).GetDeviceInfo();
+                            _info = new DeviceInfo(); // for debug purposes
                     }
                 }
             } else {
@@ -329,53 +348,74 @@ public class DevicesWindow : Window
                 }
                 ImGui.SameLine();
                 ImGui.Text($"Protocol: {Session?.ProtocolType.ToString()}");
-                if (Session?.ProtocolType == DeviceSession.ProtocolTypeEnum.Odin) {
-                    ImGui.Separator();
-                    ImGui.Text($"Model: {_info.Model} | Region: {_info.Region}");
-                    ImGui.Text($"Serial Code: {_info.SerialCode}");
-                    ImGui.Text($"Carrier ID: {_info.CarrierID}");
-                }
-                ImGui.Separator();
-                if (ImGui.Button("Dump PIT")) {
-                    var path = Path.Combine(Environment.GetFolderPath(
-                        Environment.SpecialFolder.Desktop), $"{_info.Model}.pit");
-                    if (File.Exists(path)) {
-                        WindowsManager.ShowPopup("PIT dump cancelled",
-                            $"{path} already exists!");
-                        return;
-                    }
-                    using (var stream = new FileStream(path, FileMode.Create))
-                        ((OdinProtocol) Session?.Protocol!).DumpPit(stream);
-                    WindowsManager.ShowPopup("PIT successfully dumped",
-                        $"File was saved as {path}");
-                }
-                ImGui.SameLine();
-                if (ImGui.Button("Reboot")) {
-                    WindowsManager.ShowPopup("Thor GUI",
-                        $"Device is rebooting!");
-                    ((OdinProtocol) Session?.Protocol!).Reboot();
-                    Session = null;
-                }
-                ImGui.SameLine();
-                if (ImGui.Button("Shutdown")) {
-                    WindowsManager.ShowPopup("Thor GUI",
-                        $"Device is shutting down!");
-                    ((OdinProtocol) Session?.Protocol!).Shutdown();
-                    Session = null;
-                }
-                ImGui.SameLine();
-                if (ImGui.Button("Reboot into Odin")) {
-                    WindowsManager.ShowPopup("Thor GUI",
-                        $"Device is rebooting into Download mode!");
-                    ((OdinProtocol) Session?.Protocol!).OdinReboot();
-                    Session = null;
-                }
-                ImGui.SameLine();
-                if (ImGui.Button("Factory Reset")) {
-                    WindowsManager.ShowPopup("Thor GUI",
-                        $"Successfully erased UserData!");
-                    ((OdinProtocol) Session?.Protocol!).NandEraseAll();
-                    Session = null;
+                switch (Session?.ProtocolType) {
+                    #region Odin protocol
+                    case DeviceSession.ProtocolTypeEnum.Odin:
+                        ImGui.Separator();
+                        ImGui.Text($"Model: {_info.Model} | Region: {_info.Region}");
+                        ImGui.Text($"Serial Code: {_info.SerialCode}");
+                        ImGui.Text($"Carrier ID: {_info.CarrierID}");
+                        if (ImGui.Button("Dump PIT")) {
+                            var path = Path.Combine(Environment.GetFolderPath(
+                                Environment.SpecialFolder.Desktop), $"{_info.Model}.pit");
+                            if (File.Exists(path)) {
+                                WindowsManager.ShowPopup("PIT dump cancelled",
+                                    $"{path} already exists!");
+                                return;
+                            }
+                            using (var stream = new FileStream(path, FileMode.Create))
+                                ((OdinProtocol) Session?.Protocol!).DumpPit(stream);
+                            WindowsManager.ShowPopup("PIT successfully dumped",
+                                $"File was saved as {path}");
+                        }
+                        ImGui.SameLine();
+                        if (ImGui.Button("Test")) {
+                            ((OdinProtocol) Session?.Protocol!).TestCmd();
+                        }
+                        ImGui.SameLine();
+                        if (ImGui.Button("Reboot")) {
+                            WindowsManager.ShowPopup("Thor GUI",
+                                $"Device is rebooting!");
+                            ((OdinProtocol) Session?.Protocol!).Reboot();
+                            Session = null;
+                        }
+                        ImGui.SameLine();
+                        if (ImGui.Button("Shutdown")) {
+                            WindowsManager.ShowPopup("Thor GUI",
+                                $"Device is shutting down!");
+                            ((OdinProtocol) Session?.Protocol!).Shutdown();
+                            Session = null;
+                        }
+                        ImGui.SameLine();
+                        if (ImGui.Button("Reboot into Odin")) {
+                            WindowsManager.ShowPopup("Thor GUI",
+                                $"Device is rebooting into Download mode!");
+                            ((OdinProtocol) Session?.Protocol!).OdinReboot();
+                            Session = null;
+                        }
+                        ImGui.SameLine();
+                        if (ImGui.Button("Factory Reset")) {
+                            WindowsManager.ShowPopup("Thor GUI",
+                                $"Successfully erased UserData!");
+                            ((OdinProtocol) Session?.Protocol!).NandEraseAll();
+                            Session = null;
+                        }
+                        break;
+
+                    #endregion
+                    #region Prompt console
+                    case DeviceSession.ProtocolTypeEnum.Prompt:
+                        ImGui.Separator();
+                        ImGui.Text("Response is written in logs (if any)");
+                        ImGui.InputText("Command", ref _promptCmd, 256);
+                        ImGui.SameLine();
+                        if (ImGui.Button("Run")) {
+                            Program.Logger.Information(((PromptProtocol)
+                                Session.Protocol).SendCmd(_promptCmd));
+                            _promptCmd = "";
+                        }
+                        break;
+                    #endregion
                 }
                 ImGui.EndDisabled();
             }
@@ -389,7 +429,7 @@ public class DevicesWindow : Window
             && Session != null && !_debug) {
             Session = null; WindowsManager.ShowPopup("Device unexpectedly disconnected",
                 _isFlashing ? "Do not panic, it is not over yet!\n" +
-                              "Connect your device back again, and try to flash again.\n" +
+                              "Connect your device back again and try to flash.\n" +
                               "Do not restart or power off the device, or else..." : 
                     "You're fine - just reconnect the device.\n" +
                     "If you didn't touch the cable, please check\n" +
@@ -692,7 +732,7 @@ public class DevicesWindow : Window
                 
                 using (var file = new FileStream(_inputBoxes[3],
                     FileMode.Open, FileAccess.Read))
-                using (var stream = new TarInputStream(file, Encoding.UTF8)) {
+                using (var stream = new TarInputStream(file, Encoding.ASCII)) {
                     var entry = stream.GetNextEntry();
                     while (entry != null) {
                         if (!entry.IsDirectory && entry.Name.EndsWith(".pit")) {
@@ -787,7 +827,7 @@ public class DevicesWindow : Window
 
                     using var file = new FileStream(_inputBoxes[i],
                         FileMode.Open, FileAccess.Read);
-                    using var stream = new TarInputStream(file, Encoding.UTF8);
+                    using var stream = new TarInputStream(file, Encoding.ASCII);
                     var entry = stream.GetNextEntry();
                     while (entry != null) {
                         if (!entry.IsDirectory) {

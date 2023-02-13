@@ -3,6 +3,7 @@
 // License, v2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using TheAirBlow.Thor.Enigma.Exceptions;
@@ -28,12 +29,16 @@ public class BasicCmdReceiver : IReceiver
         using var memory = new MemoryStream(buf);
         using var reader = new BinaryReader(memory);
         var value1 = reader.ReadInt32();
-        if (value1 != _expectedValue)
+        if (value1 != _expectedValue) {
+            File.WriteAllBytes("data.bin", buf);
             throw new UnexpectedValueException(
                 $"Received 0x{value1:X4}, expected 0x{_expectedValue:X4}");
+        }
 
-        while (memory.Position != memory.Length - 1)
-            Arguments.Add(reader.ReadInt32());
+        try {
+            while (true)
+                Arguments.Add(reader.ReadInt32());
+        } catch { /* Ignore */ }
     }
 
     /// <summary>

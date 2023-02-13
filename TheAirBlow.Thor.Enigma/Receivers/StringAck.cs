@@ -16,10 +16,10 @@ public class StringAck : IReceiver
     /// <param name="buf">Byte Buffer</param>
     public void Receive(byte[] buf)
     {
-        var str = Encoding.UTF8.GetString(buf);
-        if (str != _expectedValue)
+        var str = Encoding.ASCII.GetString(buf);
+        if (!str.StartsWith(_expectedValue))
             throw new UnexpectedValueException(
-                $"Received {buf}, expected {_expectedValue}");
+                $"Received \"{str}\", expected \"{_expectedValue}\"");
     }
 
     /// <summary>

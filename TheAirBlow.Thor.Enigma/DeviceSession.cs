@@ -4,9 +4,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 using System;
+using System.Text;
 using LibUsbDotNet;
 using LibUsbDotNet.Descriptors;
 using LibUsbDotNet.Info;
+using LibUsbDotNet.LibUsb;
 using LibUsbDotNet.LudnMonoLibUsb;
 using LibUsbDotNet.Main;
 using MonoLibUsb;
@@ -30,16 +32,6 @@ public class DeviceSession : IDisposable
     /// Samsung product IDs
     /// </summary>
     public static readonly int[] SamsungPids = { 0x6601, 0x685D, 0x68C3 };
-        
-    /// <summary>
-    /// MonoLibUsb session handle
-    /// </summary>
-    private readonly MonoUsbSessionHandle _sessionHandle = new();
-        
-    /// <summary>
-    /// MonoLibUsb device handle
-    /// </summary>
-    private MonoUsbDeviceHandle _deviceHandle;
 
     /// <summary>
     /// USB writer
@@ -55,12 +47,7 @@ public class DeviceSession : IDisposable
     /// Selected USB Device
     /// </summary>
     private UsbDevice _device;
-        
-    /// <summary>
-    /// MonoLibUsb error code
-    /// </summary>
-    private int _error;
-        
+
     /// <summary>
     /// Serilog Logger
     /// </summary>
@@ -74,10 +61,10 @@ public class DeviceSession : IDisposable
     /// <summary>
     /// Loke/Odin protocol
     /// </summary>
-    public enum ProtocolTypeEnum { Loke, Odin }
+    public enum ProtocolTypeEnum { Loke, Odin, Prompt }
 
     /// <summary>
-    /// Protocol type (Loke/Odin)
+    /// Protocol type (listed above)
     /// </summary>
     public ProtocolTypeEnum ProtocolType;
     
@@ -88,28 +75,22 @@ public class DeviceSession : IDisposable
     /// </summary>
     /// <param name="device">USB device</param>
     /// <param name="logger">Logging</param>
-    public DeviceSession(UsbRegistry device, Logger logger)
+    /// <param name="prompt">PROMPT console</param>
+    public DeviceSession(UsbRegistry device, Logger logger, bool prompt = false)
     {
         _logger = logger;
         _device = device.Device;
         Initialize();
-        DetectProtocol();
+        if (prompt) {
+            ProtocolType = ProtocolTypeEnum.Prompt;
+            Protocol = new PromptProtocol(_writer, _reader);
+        } else DetectProtocol();
     }
 
-    /// <summary>
-    /// Check for errors
-    /// </summary>
-    private void CheckForErrors()
-    {
-        if (_error == 0) return; var error = _error; Dispose(); 
-        throw new DeviceConnectionFailedException(error.ToString());
-    }
-        
     // Only used in initialization
-    private int _alternateId = 0xFF;
-    private int _interfaceId = 0xFF;
-    private byte _readEndpoint = 0xFF;
-    private byte _writeEndpoint = 0xFF;
+    private int _interfaceId = -1;
+    private int _readEndpoint = -1;
+    private int _writeEndpoint = -1;
 
     /// <summary>
     /// Initialize connection and required stuff
@@ -119,59 +100,52 @@ public class DeviceSession : IDisposable
         if (!_device.Open())
             throw new DeviceConnectionFailedException($"Unable to open device!");
 
-        _logger.Information("Initializing DeviceSession...");
+        _logger.Information($"=============================================");
         _logger.Information($"Driver mode: {_device.DriverMode}");
         _logger.Information($"Product: {_device.Info.ProductString}");
-        bool found = false;
         _logger.Information($"Interfaces total: {_device.Configs[0].InterfaceInfoList.Count}!");
-        foreach (UsbInterfaceInfo interfaceInfo in _device.Configs[0].InterfaceInfoList) {
-            byte possibleReadEndpoint = 0xFF;
-            byte possibleWriteEndpoint = 0xFF;
-            _interfaceId = interfaceInfo.Descriptor.InterfaceID;
-            _alternateId = interfaceInfo.Descriptor.AlternateID;
-            _logger.Information($"Interface 0x{_interfaceId:X2}/0x{_alternateId:X2}: " +
-                                $"{interfaceInfo.EndpointInfoList.Count}/{interfaceInfo.Descriptor.Class}");
-            if (interfaceInfo.EndpointInfoList.Count != 2) continue;
-            if (interfaceInfo.Descriptor.Class != ClassCodeType.Data) continue;
-            _logger.Information($"This interface is valid!");
-            foreach (var endpoint in interfaceInfo.EndpointInfoList) {
-                var id = endpoint.Descriptor.EndpointID;
-                if (id is >= 0x81 and <= 0x8F)
-                    possibleReadEndpoint = id;
-                else if (id is >= 0x01 and <= 0x0F)
-                    possibleWriteEndpoint = id;
-                else throw new DeviceConnectionFailedException($"Invalid EndpointID!");
-                _logger.Information($"Endpoint 0x{id:X2}: " +
-                                    $"{endpoint.Descriptor.MaxPacketSize}/{endpoint.Descriptor.Interval}/{endpoint.Descriptor.Refresh}");
-            }
+        _logger.Information($"=============================================");
+        var found = false;
+        if (_device is IUsbDevice whole) {
+            if (!whole.SetConfiguration(_device.Configs[0].Descriptor.ConfigID))
+                throw new DeviceConnectionFailedException("Failed to set configuration!");
+            
+            _logger.Information("Searching for RW data interface");
+            foreach (var i in whole.Configs[0].InterfaceInfoList) {
+                if (i.Descriptor.Class != ClassCodeType.Data) continue;
+                if (i.EndpointInfoList.Count != 2) continue;
+                _logger.Information("Found candidate, checking endpoints");
+                foreach (var j in i.EndpointInfoList) {
+                    if (j.Descriptor.EndpointID > 0x80)
+                        _readEndpoint = j.Descriptor.EndpointID;
+                    else _writeEndpoint = j.Descriptor.EndpointID;
+                }
 
-            if (possibleReadEndpoint == 0xFF || possibleWriteEndpoint == 0xFF) continue;
-            found = true;
-            _logger.Information($"Interface's endpoints are valid!");
-            _readEndpoint = possibleReadEndpoint;
-            _writeEndpoint = possibleWriteEndpoint;
+                if (_readEndpoint != -1 && _writeEndpoint != -1) {
+                    _interfaceId = i.Descriptor.InterfaceID;
+                    _logger.Information("Endpoints found successfully");
+                    if (!whole.ClaimInterface(i.Descriptor.InterfaceID)) {
+                        _logger.Error("Failed to claim interface!");
+                        break;
+                    }
+                    if (!whole.SetAltInterface(i.Descriptor.AlternateID)) {
+                        _logger.Error("Failed to set alternative interface!");
+                        break;
+                    }
+                    
+                    found = true; 
+                    break;
+                }
+
+                _readEndpoint = -1;
+                _writeEndpoint = -1;
+            }
         }
             
-        if (!found)
-            throw new DeviceConnectionFailedException("Couldn't find any valid endpoints!");
-        if (_device is MonoUsbDevice mono && !_sessionHandle.IsInvalid) {
-            _deviceHandle = mono.Profile.OpenDeviceHandle();
-            if (_deviceHandle.IsInvalid)
-                throw new Exception("Handle is invalid!");
-            _error = MonoUsbApi.SetConfiguration(_deviceHandle, _device.Configs[0].Descriptor.ConfigID); CheckForErrors();
-            _error = MonoUsbApi.ClaimInterface(_deviceHandle, _interfaceId); CheckForErrors();
-            _error = MonoUsbApi.SetInterfaceAltSetting(_deviceHandle, _interfaceId, _alternateId); CheckForErrors();
-            if (MonoUsbApi.KernelDriverActive(_deviceHandle, _interfaceId) == 1) {
-                _error = MonoUsbApi.DetachKernelDriver(_deviceHandle, _interfaceId); CheckForErrors();
-                _logger.Information($"Kernel driver is active, detached!");
-            }
-            
-            _error = MonoUsbApi.ResetDevice(_deviceHandle); CheckForErrors();
-        }
-
-        _writer = _device.OpenEndpointWriter((WriteEndpointID) _writeEndpoint);
-        _reader = _device.OpenEndpointReader((ReadEndpointID) _readEndpoint);
-        _logger.Information("Initialization done!");
+        if (!found) throw new DeviceConnectionFailedException("Couldn't find any valid endpoints!");
+        _reader = _device.OpenEndpointReader((ReadEndpointID)_readEndpoint);
+        _writer = _device.OpenEndpointWriter((WriteEndpointID)_writeEndpoint);
+        _logger.Information("Reader/writer ready");
     }
 
     /// <summary>
@@ -179,18 +153,22 @@ public class DeviceSession : IDisposable
     /// </summary>
     private void DetectProtocol()
     {
-        // Loke Protocol
-        var protocol = (Protocol) new LokeProtocol(_writer, _reader);
-        if (protocol.Handshake()) {
-            ProtocolType = ProtocolTypeEnum.Loke;
-            Protocol = protocol;
-        }
-        
         // Odin Protocol
-        protocol = (Protocol) new OdinProtocol(_writer, _reader);
+        _logger.Information("Trying to connect with Odin protocol...");
+        var protocol = (Protocol) new OdinProtocol(_writer, _reader);
         if (protocol.Handshake()) {
             ProtocolType = ProtocolTypeEnum.Odin;
             Protocol = protocol;
+            return;
+        }
+        
+        // Loke Protocol
+        _logger.Information("Trying to connect with Loke protocol...");
+        protocol = new LokeProtocol(_writer, _reader);
+        if (protocol.Handshake()) {
+            ProtocolType = ProtocolTypeEnum.Loke;
+            Protocol = protocol;
+            return;
         }
 
         throw new UnexpectedErrorException("Unknown bootloader!");
@@ -201,11 +179,9 @@ public class DeviceSession : IDisposable
     /// </summary>
     public void Dispose()
     {
-        if (_deviceHandle != null) {
-            _error = MonoUsbApi.ReleaseInterface(_deviceHandle, _interfaceId);
-            CheckForErrors(); _deviceHandle.Close();
-        }
-        _sessionHandle.Close();
+        if (_device is IUsbDevice dev)
+            if (!dev.ReleaseInterface(_interfaceId))
+                throw new UnexpectedErrorException("Unable to release interface!");
         _device.Close();
     }
 }

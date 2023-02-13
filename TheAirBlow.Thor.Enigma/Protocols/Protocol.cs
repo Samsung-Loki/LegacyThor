@@ -60,7 +60,7 @@ public abstract class Protocol : IDisposable
         if (sender != null) {
             var buf = sender.Send();
             var code = _writer.Write(buf, timeout, out var transferred);
-            if (code != ErrorCode.Ok && code != ErrorCode.Success)
+            if (code != ErrorCode.None)
                 throw new UnexpectedErrorException(
                     $"LibUSB error: {code} ({UsbDevice.LastErrorString} {UsbDevice.LastErrorNumber})");
             if (buf.Length != transferred)
@@ -80,7 +80,7 @@ public abstract class Protocol : IDisposable
         if (receiver == null) return null;
         var buf2 = new byte[1024];
         var code2 = _reader.Read(buf2, timeout, out var transferred2);
-        if (code2 != ErrorCode.Ok && code2 != ErrorCode.Success)
+        if (code2 != ErrorCode.None)
             throw new UnexpectedErrorException(
                 $"LibUSB error: {code2} ({UsbDevice.LastErrorString} {UsbDevice.LastErrorNumber})");
         if (transferred2 == 0) {

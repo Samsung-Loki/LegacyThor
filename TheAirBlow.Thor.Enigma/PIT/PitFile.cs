@@ -80,8 +80,8 @@ public class PitFile
         using var stream = new BinaryWriter(input);
         stream.Write(0x12349876);
         stream.Write(Header.PartitionsCount);
-        stream.Write(Encoding.UTF8.GetBytes(Header.GangName));
-        stream.Write(Encoding.UTF8.GetBytes(Header.ProjectName));
+        stream.Write(Encoding.ASCII.GetBytes(Header.GangName));
+        stream.Write(Encoding.ASCII.GetBytes(Header.ProjectName));
         stream.Write(Header.Dummy);
         foreach (var i in Entries) {
             stream.Write((int)i.BinaryType);
@@ -93,9 +93,9 @@ public class PitFile
             stream.Write(i.BlockCountOrNumber);
             stream.Write(i.FileOffset);
             stream.Write(i.FileSize);
-            stream.Write(Encoding.UTF8.GetBytes(i.Name));
-            stream.Write(Encoding.UTF8.GetBytes(i.FileName));
-            stream.Write(Encoding.UTF8.GetBytes(i.DeltaName));
+            stream.Write(Encoding.ASCII.GetBytes(i.Name));
+            stream.Write(Encoding.ASCII.GetBytes(i.FileName));
+            stream.Write(Encoding.ASCII.GetBytes(i.DeltaName));
         }
     }
 
@@ -131,8 +131,8 @@ public class PitFile
             if (magic != 0x12349876)
                 throw new InvalidDataException($"Expected 0x12349876 magic number, got {magic:X2}");
             Header.PartitionsCount = reader.ReadInt32();
-            Header.GangName = Encoding.UTF8.GetString(reader.ReadBytes(8)).Replace("\0", "");
-            Header.ProjectName = Encoding.UTF8.GetString(reader.ReadBytes(8)).Replace("\0", "");
+            Header.GangName = Encoding.ASCII.GetString(reader.ReadBytes(8)).Replace("\0", "");
+            Header.ProjectName = Encoding.ASCII.GetString(reader.ReadBytes(8)).Replace("\0", "");
             Header.Dummy = reader.ReadInt32();
             for (var i = 0; i < Header.PartitionsCount; i++)
                 Entries.Add(new PitEntry {
@@ -145,9 +145,9 @@ public class PitFile
                     BlockCountOrNumber = reader.ReadInt32(),
                     FileOffset = reader.ReadInt32(),
                     FileSize = reader.ReadInt32(),
-                    Name = Encoding.UTF8.GetString(reader.ReadBytes(32)).Replace("\0", ""),
-                    FileName = Encoding.UTF8.GetString(reader.ReadBytes(32)).Replace("\0", ""),
-                    DeltaName = Encoding.UTF8.GetString(reader.ReadBytes(32)).Replace("\0", "")
+                    Name = Encoding.ASCII.GetString(reader.ReadBytes(32)).Replace("\0", ""),
+                    FileName = Encoding.ASCII.GetString(reader.ReadBytes(32)).Replace("\0", ""),
+                    DeltaName = Encoding.ASCII.GetString(reader.ReadBytes(32)).Replace("\0", "")
                 });
         }
 

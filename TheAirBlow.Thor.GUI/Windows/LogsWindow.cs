@@ -72,7 +72,7 @@ public class LogsWindow : Window
         using var stream = new StreamWriter(memory);
         formatter.Format(_event, stream);
         stream.Flush();
-        _logs += Encoding.UTF8.GetString(
+        _logs += Encoding.ASCII.GetString(
             memory.ToArray());
         switch (_event.Level) {
             case LogEventLevel.Fatal:

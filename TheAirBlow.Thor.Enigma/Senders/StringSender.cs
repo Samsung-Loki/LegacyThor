@@ -14,7 +14,7 @@ public class StringSender : ISender
     /// </summary>
     /// <returns></returns>
     public byte[] Send()
-        => Encoding.UTF8.GetBytes(_str);
+        => Encoding.ASCII.GetBytes(_str);
 
     /// <summary>
     /// String to send

@@ -36,7 +36,7 @@ public class DeviceInfo
         for (var i = 0; i < count; i++) {
             var type = stream.ReadInt32();
             var size = stream.ReadInt32();
-            var str = Encoding.UTF8.GetString(
+            var str = Encoding.ASCII.GetString(
                 stream.ReadBytes(size));
             switch (type) {
                 case 0x00:

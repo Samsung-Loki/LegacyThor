@@ -5,6 +5,7 @@
 
 using System;
 using System.IO;
+using System.Text;
 using LibUsbDotNet;
 using TheAirBlow.Thor.Enigma.Exceptions;
 using TheAirBlow.Thor.Enigma.Protocols.Odin;
@@ -39,7 +40,7 @@ public class OdinProtocol : Protocol
     /// </summary>
     public override bool Handshake()
     {
-        var rec = Send(new StringSender("ODIN"), 
+        var rec = Send(new StringSender("ODIN"),
             new StringAck("LOKE"));
         if (rec != null) {
             _done = true;
@@ -82,20 +83,18 @@ public class OdinProtocol : Protocol
     /// <returns>Device Information</returns>
     public DeviceInfo GetDeviceInfo()
     {
-        var res = (BasicCmdReceiver)Send(new BasicCmdSender(
-                (int)PacketType.DeviceInfo, 0x00),
-            new BasicCmdReceiver((int)PacketType.DeviceInfo), true);
-        var size = res.Arguments[0];
+        // Using RawByteBuffer everywhere cause old bootloaders
+        // spit out AcKnOwLeDgMeNt instead for some reason...
+        Send(new BasicCmdSender((int)PacketType.DeviceInfo, 0x00), 
+            new RawByteBuffer());
         using var memory = new MemoryStream();
-        for (var i = 0; i < Math.Floor((decimal)size / 500); i++) {
-            var res2 = (RawByteBuffer)Send(new BasicCmdSender
-                    ((int)PacketType.DeviceInfo, 0x01),
-                new RawByteBuffer(), true);
-            memory.Write(res2.Data);
-        }
+        var res2 = (RawByteBuffer)Send(new BasicCmdSender
+                ((int)PacketType.DeviceInfo, 0x01, 0),
+            new RawByteBuffer(), true);
+        memory.Write(res2.Data);
         
         Send(new BasicCmdSender((int)PacketType.DeviceInfo, 0x02),
-            new BasicCmdReceiver((int)PacketType.DeviceInfo), true);
+            new RawByteBuffer());
 
         return new DeviceInfo(memory.ToArray());
     }
@@ -174,5 +173,10 @@ public class OdinProtocol : Protocol
         => Send(new BasicCmdSender((int)PacketType.SessionStart, 
                 (int)SessionStart.TotalBytes, total),
             new ByteAck((int)PacketType.SessionStart),
+            true);
+
+    public void TestCmd()
+        => Send(new BasicCmdSender(110, 0),
+            new BasicCmdReceiver(110),
             true);
 }

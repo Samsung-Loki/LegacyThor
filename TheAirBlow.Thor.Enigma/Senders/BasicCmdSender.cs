@@ -81,7 +81,7 @@ public class BasicCmdSender : ISender
         using var memory = new MemoryStream();
         using var binary = new BinaryWriter(memory);
         binary.Write(type); binary.Write(command);
-        binary.Write(Encoding.UTF8
+        binary.Write(Encoding.ASCII
             .GetBytes(argument));
         
         _buffer = memory.ToArray();
